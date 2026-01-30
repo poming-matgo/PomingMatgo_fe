@@ -23,3 +23,8 @@ export interface WebSocketResponse<T = unknown> {
   message: string;
   data?: T;
 }
+
+export interface WebSocketErrorResponse {
+  errorCode: string;
+  errorMessage: string;
+}

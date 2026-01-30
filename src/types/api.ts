@@ -3,3 +3,9 @@ export interface ApiResponse<T = unknown> {
   message: string;
   data?: T;
 }
+
+export interface ErrorResponse {
+  errorCode: string;
+  httpStatus: number;
+  errorMessage: string;
+}
