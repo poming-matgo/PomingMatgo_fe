@@ -5,6 +5,7 @@ import { createEmptyPlayer } from '../types/game';
 import { ALL_CARDS } from '../types/card';
 
 interface GameStore extends GameState {
+  isGameStarted: boolean;
   initializeGame: () => void;
   loadGameState: (state: GameState) => void; // 서버에서 받은 게임 상태 로드
   playCard: (card: Card) => void;
@@ -21,8 +22,17 @@ const shuffleDeck = (cards: Card[]): Card[] => {
   return shuffled;
 };
 
-// 더미 초기 상태 생성 (실제로는 서버에서 받아올 데이터)
-const createInitialState = (): GameState => {
+// 빈 초기 상태 (게임 시작 전)
+const createEmptyState = (): GameState => ({
+  player: createEmptyPlayer(),
+  opponent: createEmptyPlayer(),
+  field: [],
+  deck: [],
+  currentTurn: 'player'
+});
+
+// 게임 시작 시 카드 분배 (실제로는 서버에서 받아올 데이터)
+const createGameState = (): GameState => {
   const shuffled = shuffleDeck(ALL_CARDS);
 
   // 카드 분배: 플레이어 10장, 상대 10장, 바닥 8장, 나머지는 덱
@@ -48,10 +58,11 @@ const createInitialState = (): GameState => {
 };
 
 export const useGameStore = create<GameStore>((set) => ({
-  ...createInitialState(),
+  ...createEmptyState(),
+  isGameStarted: false,
 
   initializeGame: () => {
-    set(createInitialState());
+    set({ ...createGameState(), isGameStarted: true });
   },
 
   // 서버에서 받은 게임 상태로 업데이트
@@ -66,6 +77,6 @@ export const useGameStore = create<GameStore>((set) => ({
   },
 
   reset: () => {
-    set(createInitialState());
+    set({ ...createEmptyState(), isGameStarted: false });
   }
 }));

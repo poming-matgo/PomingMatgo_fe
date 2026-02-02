@@ -15,12 +15,14 @@ export const PlayerNumber = {
 // Event Types
 export const EventMainType = {
   JOIN_ROOM: 'JOIN_ROOM',
+  ROOM: 'ROOM',
 } as const;
 
 export type EventMainType = typeof EventMainType[keyof typeof EventMainType];
 
 export const EventSubType = {
   CONNECT: 'CONNECT',
+  READY: 'READY',
 } as const;
 
 export type EventSubType = typeof EventSubType[keyof typeof EventSubType];
@@ -44,6 +46,8 @@ export interface JoinRoomData {
 // Response
 export const ResponseStatus = {
   CONNECT: 'CONNECT',
+  READY: 'READY',
+  START: 'START',
 } as const;
 
 export type ResponseStatus = typeof ResponseStatus[keyof typeof ResponseStatus];

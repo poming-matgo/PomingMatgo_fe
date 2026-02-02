@@ -13,18 +13,23 @@ interface UseGameWebSocketProps {
   userId: string;
   roomId: string;
   onOpponentConnect?: (player: Player) => void;
+  onPlayerReady?: (player: Player) => void;
+  onGameStart?: () => void;
 }
 
 interface UseGameWebSocketReturn {
   isConnected: boolean;
   connectedPlayers: Player[];
   sendMessage: <T>(message: WebSocketRequest<T>) => void;
+  sendReady: () => void;
 }
 
 export const useGameWebSocket = ({
   userId,
   roomId,
   onOpponentConnect,
+  onPlayerReady,
+  onGameStart,
 }: UseGameWebSocketProps): UseGameWebSocketReturn => {
   const wsRef = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -34,6 +39,19 @@ export const useGameWebSocket = ({
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(message));
       console.log('WS 전송:', message);
+    }
+  }, []);
+
+  const sendReady = useCallback(() => {
+    const readyMessage = {
+      eventType: {
+        type: EventMainType.ROOM,
+        subType: EventSubType.READY,
+      },
+    };
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(readyMessage));
+      console.log('WS 전송:', readyMessage);
     }
   }, []);
 
@@ -75,6 +93,16 @@ export const useGameWebSocket = ({
           });
           onOpponentConnect?.(response.player);
         }
+
+        // READY 상태 메시지 처리
+        if (response.status === 'READY') {
+          onPlayerReady?.(response.player);
+        }
+
+        // START 상태 메시지 처리 (둘 다 준비 완료)
+        if (response.status === 'START') {
+          onGameStart?.();
+        }
       } catch (err) {
         console.error('WS 메시지 파싱 오류:', err);
       }
@@ -92,11 +120,12 @@ export const useGameWebSocket = ({
     return () => {
       ws.close();
     };
-  }, [userId, roomId, onOpponentConnect]);
+  }, [userId, roomId, onOpponentConnect, onPlayerReady, onGameStart]);
 
   return {
     isConnected,
     connectedPlayers,
     sendMessage,
+    sendReady,
   };
 };
