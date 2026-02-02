@@ -1,18 +1,21 @@
 import { useState, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
 import { PlayerArea } from './PlayerArea';
 import { FieldArea } from './FieldArea';
 import { useGameWebSocket } from '../hooks/useGameWebSocket';
 import type { Player } from '../types/websocket';
 
-interface GameBoardProps {
+interface GameState {
   userId: string;
   roomId: string;
   initialHasOpponent: boolean;
-  onBackToLobby: () => void;
 }
 
-export const GameBoard = ({ userId, roomId, initialHasOpponent, onBackToLobby }: GameBoardProps) => {
+export const GameBoard = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { userId, roomId, initialHasOpponent } = location.state as GameState;
   const { player, opponent, field, deck, currentTurn, initializeGame, reset } = useGameStore();
   const [opponentConnected, setOpponentConnected] = useState(initialHasOpponent);
 
@@ -52,7 +55,7 @@ export const GameBoard = ({ userId, roomId, initialHasOpponent, onBackToLobby }:
         </div>
         <div className="flex gap-2">
           <button
-            onClick={onBackToLobby}
+            onClick={() => navigate('/')}
             className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg font-semibold transition-colors"
           >
             나가기

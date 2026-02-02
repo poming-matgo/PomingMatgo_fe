@@ -1,11 +1,9 @@
+import { useNavigate } from 'react-router-dom';
 import { DEV_CONFIG } from '../config/dev';
 import { useCreateAndJoinRoom, useJoinRoom } from '../hooks/useRoom';
 
-interface LobbyProps {
-  onEnterGame: (userId: string, roomId: string, initialHasOpponent: boolean) => void;
-}
-
-export const Lobby = ({ onEnterGame }: LobbyProps) => {
+export const Lobby = () => {
+  const navigate = useNavigate();
   const createAndJoinMutation = useCreateAndJoinRoom();
   const joinMutation = useJoinRoom();
 
@@ -18,7 +16,13 @@ export const Lobby = ({ onEnterGame }: LobbyProps) => {
       {
         onSuccess: () => {
           // 방 만들기: 상대방 없음
-          onEnterGame(DEV_CONFIG.PLAYER_1_ID, DEV_CONFIG.DEFAULT_ROOM_ID, false);
+          navigate('/game', {
+            state: {
+              userId: DEV_CONFIG.PLAYER_1_ID,
+              roomId: DEV_CONFIG.DEFAULT_ROOM_ID,
+              initialHasOpponent: false,
+            },
+          });
         },
       }
     );
@@ -33,7 +37,13 @@ export const Lobby = ({ onEnterGame }: LobbyProps) => {
       {
         onSuccess: () => {
           // 게임방 조인: 상대방 이미 있음
-          onEnterGame(DEV_CONFIG.PLAYER_2_ID, DEV_CONFIG.DEFAULT_ROOM_ID, true);
+          navigate('/game', {
+            state: {
+              userId: DEV_CONFIG.PLAYER_2_ID,
+              roomId: DEV_CONFIG.DEFAULT_ROOM_ID,
+              initialHasOpponent: true,
+            },
+          });
         },
       }
     );
