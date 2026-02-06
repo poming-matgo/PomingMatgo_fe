@@ -16,6 +16,7 @@ export const PlayerNumber = {
 export const EventMainType = {
   JOIN_ROOM: 'JOIN_ROOM',
   ROOM: 'ROOM',
+  PREGAME: 'PREGAME',
 } as const;
 
 export type EventMainType = typeof EventMainType[keyof typeof EventMainType];
@@ -23,6 +24,7 @@ export type EventMainType = typeof EventMainType[keyof typeof EventMainType];
 export const EventSubType = {
   CONNECT: 'CONNECT',
   READY: 'READY',
+  LEADER_SELECTION: 'LEADER_SELECTION',
 } as const;
 
 export type EventSubType = typeof EventSubType[keyof typeof EventSubType];
@@ -48,6 +50,8 @@ export const ResponseStatus = {
   CONNECT: 'CONNECT',
   READY: 'READY',
   START: 'START',
+  LEADER_SELECTION: 'LEADER_SELECTION',
+  LEADER_SELECTION_RESULT: 'LEADER_SELECTION_RESULT',
 } as const;
 
 export type ResponseStatus = typeof ResponseStatus[keyof typeof ResponseStatus];
@@ -57,6 +61,18 @@ export interface WebSocketResponse<T = unknown> {
   status: ResponseStatus;
   message: string;
   data: T | null;
+}
+
+// Leader Selection 관련 타입
+export interface LeaderSelectionData {
+  cardIndex: string;
+}
+
+export interface LeaderSelectionResultData {
+  player1Month: number;
+  player2Month: number;
+  leadPlayer: number;
+  fiveCards: string[];
 }
 
 export interface WebSocketErrorResponse {

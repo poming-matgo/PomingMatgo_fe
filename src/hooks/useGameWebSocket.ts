@@ -7,6 +7,7 @@ import {
   type WebSocketResponse,
   type JoinRoomData,
   type Player,
+  type LeaderSelectionResultData,
 } from '../types/websocket';
 
 interface UseGameWebSocketProps {
@@ -15,6 +16,8 @@ interface UseGameWebSocketProps {
   onOpponentConnect?: (player: Player) => void;
   onPlayerReady?: (player: Player) => void;
   onGameStart?: () => void;
+  onLeaderSelection?: (player: Player, cardIndex: number) => void;
+  onLeaderSelectionResult?: (data: LeaderSelectionResultData) => void;
 }
 
 interface UseGameWebSocketReturn {
@@ -22,6 +25,7 @@ interface UseGameWebSocketReturn {
   connectedPlayers: Player[];
   sendMessage: <T>(message: WebSocketRequest<T>) => void;
   sendReady: () => void;
+  sendLeaderSelection: (cardIndex: number) => void;
 }
 
 export const useGameWebSocket = ({
@@ -30,6 +34,8 @@ export const useGameWebSocket = ({
   onOpponentConnect,
   onPlayerReady,
   onGameStart,
+  onLeaderSelection,
+  onLeaderSelectionResult,
 }: UseGameWebSocketProps): UseGameWebSocketReturn => {
   const wsRef = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -52,6 +58,22 @@ export const useGameWebSocket = ({
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(readyMessage));
       console.log('WS 전송:', readyMessage);
+    }
+  }, []);
+
+  const sendLeaderSelection = useCallback((cardIndex: number) => {
+    const message = {
+      eventType: {
+        type: EventMainType.PREGAME,
+        subType: EventSubType.LEADER_SELECTION,
+      },
+      data: {
+        cardIndex: String(cardIndex),
+      },
+    };
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(message));
+      console.log('WS 전송:', message);
     }
   }, []);
 
@@ -103,6 +125,16 @@ export const useGameWebSocket = ({
         if (response.status === 'START') {
           onGameStart?.();
         }
+
+        // LEADER_SELECTION 상태 메시지 처리 (카드 선택)
+        if (response.status === 'LEADER_SELECTION') {
+          onLeaderSelection?.(response.player, response.data as number);
+        }
+
+        // LEADER_SELECTION_RESULT 상태 메시지 처리 (선공 결과)
+        if (response.status === 'LEADER_SELECTION_RESULT') {
+          onLeaderSelectionResult?.(response.data as LeaderSelectionResultData);
+        }
       } catch (err) {
         console.error('WS 메시지 파싱 오류:', err);
       }
@@ -120,12 +152,13 @@ export const useGameWebSocket = ({
     return () => {
       ws.close();
     };
-  }, [userId, roomId, onOpponentConnect, onPlayerReady, onGameStart]);
+  }, [userId, roomId, onOpponentConnect, onPlayerReady, onGameStart, onLeaderSelection, onLeaderSelectionResult]);
 
   return {
     isConnected,
     connectedPlayers,
     sendMessage,
     sendReady,
+    sendLeaderSelection,
   };
 };
