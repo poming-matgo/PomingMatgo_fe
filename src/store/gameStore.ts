@@ -2,12 +2,19 @@ import { create } from 'zustand';
 import type { GameState } from '../types/game';
 import type { Card } from '../types/card';
 import { createEmptyPlayer } from '../types/game';
-import { ALL_CARDS } from '../types/card';
+import { ALL_CARDS, CARDS, type CardName } from '../types/card';
+import type { DistributedFloorCardData, AnnounceTurnInformationData } from '../types/websocket';
 
 interface GameStore extends GameState {
   isGameStarted: boolean;
+  roundInfo: AnnounceTurnInformationData | null;
   initializeGame: () => void;
-  loadGameState: (state: GameState) => void; // 서버에서 받은 게임 상태 로드
+  loadGameState: (state: GameState) => void;
+  setPlayerHand: (cardNames: string[]) => void;
+  setOpponentCardCount: (count: number) => void;
+  setFloorCards: (floorData: DistributedFloorCardData) => void;
+  setRoundInfo: (info: AnnounceTurnInformationData, myPlayerId: string) => void;
+  startGame: () => void;
   playCard: (card: Card) => void;
   reset: () => void;
 }
@@ -57,26 +64,75 @@ const createGameState = (): GameState => {
   };
 };
 
+// CardName 문자열을 Card 객체로 변환
+const cardNameToCard = (name: string): Card | null => {
+  const card = CARDS[name as CardName];
+  return card || null;
+};
+
 export const useGameStore = create<GameStore>((set) => ({
   ...createEmptyState(),
   isGameStarted: false,
+  roundInfo: null,
 
   initializeGame: () => {
     set({ ...createGameState(), isGameStarted: true });
   },
 
-  // 서버에서 받은 게임 상태로 업데이트
   loadGameState: (state: GameState) => {
     set(state);
   },
 
+  // 서버에서 받은 내 카드 배분 데이터로 손패 설정
+  setPlayerHand: (cardNames: string[]) => {
+    const hand = cardNames
+      .map(cardNameToCard)
+      .filter((c): c is Card => c !== null);
+    set((state) => ({
+      player: { ...state.player, hand },
+    }));
+  },
+
+  // 상대방 카드 수 설정 (보이지 않으므로 빈 카드로 수만 맞춤)
+  setOpponentCardCount: (count: number) => {
+    set((state) => ({
+      opponent: {
+        ...state.opponent,
+        hand: Array.from({ length: count }, () => ALL_CARDS[0]), // placeholder
+      },
+    }));
+  },
+
+  // 바닥 패 설정 (월별 그룹 데이터 → Card[] 변환)
+  setFloorCards: (floorData: DistributedFloorCardData) => {
+    const fieldCards: Card[] = [];
+    for (const cardNames of Object.values(floorData)) {
+      for (const name of cardNames) {
+        const card = cardNameToCard(name);
+        if (card) fieldCards.push(card);
+      }
+    }
+    set({ field: fieldCards });
+  },
+
+  // 라운드/턴 정보 설정 (myPlayerId: 현재 유저의 Player ID)
+  setRoundInfo: (info: AnnounceTurnInformationData, myPlayerId: string) => {
+    set({
+      roundInfo: info,
+      currentTurn: info.curPlayer === myPlayerId ? 'player' : 'opponent',
+    });
+  },
+
+  // 게임 시작 플래그
+  startGame: () => {
+    set({ isGameStarted: true });
+  },
+
   playCard: (card: Card) => {
-    // TODO: 카드 플레이 로직 구현 (향후 추가)
-    // 실제로는 서버에 카드 플레이 요청을 보내고, 응답받은 새 게임 상태를 loadGameState로 업데이트
     console.log('Card played:', card);
   },
 
   reset: () => {
-    set({ ...createEmptyState(), isGameStarted: false });
-  }
+    set({ ...createEmptyState(), isGameStarted: false, roundInfo: null });
+  },
 }));

@@ -52,6 +52,9 @@ export const ResponseStatus = {
   START: 'START',
   LEADER_SELECTION: 'LEADER_SELECTION',
   LEADER_SELECTION_RESULT: 'LEADER_SELECTION_RESULT',
+  DISTRIBUTE_CARD: 'DISTRIBUTE_CARD',
+  DISTRIBUTED_FLOOR_CARD: 'DISTRIBUTED_FLOOR_CARD',
+  ANNOUNCE_TURN_INFORMATION: 'ANNOUNCE_TURN_INFORMATION',
 } as const;
 
 export type ResponseStatus = typeof ResponseStatus[keyof typeof ResponseStatus];
@@ -78,6 +81,17 @@ export interface LeaderSelectionResultData {
 export interface WebSocketErrorResponse {
   errorCode: string;
   errorMessage: string;
+}
+
+// 카드 배분 관련 타입
+export type DistributeCardData = string[]; // ["AUG_4", "JUL_1", ...]
+
+export type DistributedFloorCardData = Record<string, string[]>; // { "1": ["JAN_3"], "6": ["JUN_2", "JUN_3"], ... }
+
+export interface AnnounceTurnInformationData {
+  round: number;
+  turn: number;
+  curPlayer: string; // "PLAYER_1" | "PLAYER_2"
 }
 
 // Legacy - 기존 호환용

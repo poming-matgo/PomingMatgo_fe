@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 // Store & Hooks
@@ -8,6 +8,7 @@ import { useGameWebSocket } from '../hooks/useGameWebSocket';
 // Types
 import { Player } from '../types/websocket';
 import type { LeaderSelectionResultData } from '../types/websocket';
+import type { DistributeCardData, DistributedFloorCardData, AnnounceTurnInformationData } from '../types/websocket';
 
 // Sub Components (UI)
 import { GameHeader } from './gameScreens/GameHeader';
@@ -30,7 +31,11 @@ export const GameBoard = () => {
   // 1. Navigation & Route State
   const location = useLocation();
   const navigate = useNavigate();
-  const state = location.state as GameRouteState;
+  const state = location.state as GameRouteState | null;
+
+  const userId = state?.userId ?? '';
+  const roomId = state?.roomId ?? '';
+  const initialHasOpponent = state?.initialHasOpponent ?? false;
 
   // 잘못된 접근 방지 (state가 없으면 홈으로 리다이렉트)
   useEffect(() => {
@@ -39,12 +44,10 @@ export const GameBoard = () => {
     }
   }, [state, navigate]);
 
-  if (!state) return null; // 리다이렉트 전 렌더링 방지
-  const { userId, roomId, initialHasOpponent } = state;
-
   // 2. Global Game Store
-  const { 
-    player, opponent, field, deck, currentTurn, isGameStarted, reset 
+  const {
+    player, opponent, field, currentTurn,
+    setPlayerHand, setOpponentCardCount, setFloorCards, setRoundInfo, reset,
   } = useGameStore();
 
   // 3. Local UI State
@@ -52,10 +55,20 @@ export const GameBoard = () => {
   const [myReady, setMyReady] = useState(false);
   const [opponentReady, setOpponentReady] = useState(false);
   const [isPickingFirst, setIsPickingFirst] = useState(false);
-  
+
   // 선공 정하기 관련 상태
   const [cardSelections, setCardSelections] = useState<CardSelection[]>([]);
   const [selectionResult, setSelectionResult] = useState<LeaderSelectionResultData | null>(null);
+
+  // 게임 시작 4가지 조건 추적
+  const [hasDistributeCard, setHasDistributeCard] = useState(false);
+  const [hasFloorCard, setHasFloorCard] = useState(false);
+  const [hasTurnInfo, setHasTurnInfo] = useState(false);
+  const [leaderTimerDone, setLeaderTimerDone] = useState(false);
+  const leaderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 4가지 조건 모두 만족 → 게임 화면으로 전환 (딜링 애니메이션 포함)
+  const allConditionsMet = hasDistributeCard && hasFloorCard && hasTurnInfo && leaderTimerDone;
 
   const myPlayer = userId === '1' ? Player.PLAYER_1 : Player.PLAYER_2;
 
@@ -84,8 +97,39 @@ export const GameBoard = () => {
 
   const handleLeaderSelectionResult = useCallback((data: LeaderSelectionResultData) => {
     setSelectionResult(data);
-    // 참고: 여기서 잠시 후 isPickingFirst를 false로 끄고 게임을 시작하는 로직이 
-    // WebSocket이나 Store 내부에서 처리된다고 가정합니다.
+    // 선 플레이어가 정해지고 3초 후 타이머 완료
+    leaderTimerRef.current = setTimeout(() => {
+      setLeaderTimerDone(true);
+    }, 3000);
+  }, []);
+
+  // 카드 배분 핸들러 (서버는 자기 카드만 전송, 상대 카드는 비공개)
+  const handleDistributeCard = useCallback((msgPlayer: typeof Player[keyof typeof Player], cards: DistributeCardData) => {
+    if (msgPlayer === myPlayer) {
+      setPlayerHand(cards);
+      // 상대도 같은 수의 카드를 받았으므로 뒤집힌 카드로 표시
+      setOpponentCardCount(cards.length);
+    }
+    setHasDistributeCard(true);
+  }, [myPlayer, setPlayerHand, setOpponentCardCount]);
+
+  // 바닥 패 배분 핸들러
+  const handleDistributedFloorCard = useCallback((data: DistributedFloorCardData) => {
+    setFloorCards(data);
+    setHasFloorCard(true);
+  }, [setFloorCards]);
+
+  // 턴 정보 핸들러
+  const handleAnnounceTurnInformation = useCallback((data: AnnounceTurnInformationData) => {
+    setRoundInfo(data, myPlayer);
+    setHasTurnInfo(true);
+  }, [setRoundInfo, myPlayer]);
+
+  // 타이머 클린업
+  useEffect(() => {
+    return () => {
+      if (leaderTimerRef.current) clearTimeout(leaderTimerRef.current);
+    };
   }, []);
 
   // 5. WebSocket Connection
@@ -97,31 +141,35 @@ export const GameBoard = () => {
     onGameStart: handleGameStart,
     onLeaderSelection: handleLeaderSelection,
     onLeaderSelectionResult: handleLeaderSelectionResult,
+    onDistributeCard: handleDistributeCard,
+    onDistributedFloorCard: handleDistributedFloorCard,
+    onAnnounceTurnInformation: handleAnnounceTurnInformation,
   });
 
   const hasOpponent = opponentConnected || connectedPlayers.length >= 2;
 
+  // state가 없으면 렌더링하지 않음 (리다이렉트 전)
+  if (!state) return null;
+
   // 6. Conditional Rendering Logic
   const renderContent = () => {
-    // 1순위: 게임이 실제로 시작되었을 때
-    if (isGameStarted) {
+    // 1순위: 4가지 조건 만족 → 게임 화면 (첫 진입 시 딜링 애니메이션)
+    if (allConditionsMet) {
       return (
-        <div className="h-full flex flex-col">
-          <ActiveGameScreen 
-            player={player}
-            opponent={opponent}
-            field={field}
-            deck={deck}
-            currentTurn={currentTurn}
-          />
-        </div>
+        <ActiveGameScreen
+          player={player}
+          opponent={opponent}
+          field={field}
+          currentTurn={currentTurn}
+          isDealing
+        />
       );
     }
 
     // 2순위: 선공 정하기 단계일 때
     if (isPickingFirst) {
       return (
-        <LeaderSelectionScreen 
+        <LeaderSelectionScreen
           myPlayer={myPlayer}
           cardSelections={cardSelections}
           selectionResult={selectionResult}
@@ -132,7 +180,7 @@ export const GameBoard = () => {
 
     // 3순위: 대기실 (기본)
     return (
-      <WaitingScreen 
+      <WaitingScreen
         hasOpponent={hasOpponent}
         myReady={myReady}
         opponentReady={opponentReady}
@@ -143,11 +191,11 @@ export const GameBoard = () => {
   return (
     <div className="w-[1400px] h-[700px] bg-gradient-to-br from-green-900 via-green-800 to-green-900 p-3 flex flex-col gap-2 overflow-hidden">
       {/* 헤더 영역 */}
-      <GameHeader 
+      <GameHeader
         userId={userId}
         isConnected={isConnected}
         hasOpponent={hasOpponent}
-        isGameStarted={isGameStarted}
+        isGameStarted={allConditionsMet}
         isPickingFirst={isPickingFirst}
         myReady={myReady}
         onReady={sendReady}

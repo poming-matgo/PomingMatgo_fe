@@ -8,6 +8,9 @@ import {
   type JoinRoomData,
   type Player,
   type LeaderSelectionResultData,
+  type DistributeCardData,
+  type DistributedFloorCardData,
+  type AnnounceTurnInformationData,
 } from '../types/websocket';
 
 interface UseGameWebSocketProps {
@@ -18,6 +21,9 @@ interface UseGameWebSocketProps {
   onGameStart?: () => void;
   onLeaderSelection?: (player: Player, cardIndex: number) => void;
   onLeaderSelectionResult?: (data: LeaderSelectionResultData) => void;
+  onDistributeCard?: (player: Player, cards: DistributeCardData) => void;
+  onDistributedFloorCard?: (data: DistributedFloorCardData) => void;
+  onAnnounceTurnInformation?: (data: AnnounceTurnInformationData) => void;
 }
 
 interface UseGameWebSocketReturn {
@@ -36,6 +42,9 @@ export const useGameWebSocket = ({
   onGameStart,
   onLeaderSelection,
   onLeaderSelectionResult,
+  onDistributeCard,
+  onDistributedFloorCard,
+  onAnnounceTurnInformation,
 }: UseGameWebSocketProps): UseGameWebSocketReturn => {
   const wsRef = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -135,6 +144,21 @@ export const useGameWebSocket = ({
         if (response.status === 'LEADER_SELECTION_RESULT') {
           onLeaderSelectionResult?.(response.data as LeaderSelectionResultData);
         }
+
+        // DISTRIBUTE_CARD 상태 메시지 처리 (카드 배분)
+        if (response.status === 'DISTRIBUTE_CARD') {
+          onDistributeCard?.(response.player, response.data as DistributeCardData);
+        }
+
+        // DISTRIBUTED_FLOOR_CARD 상태 메시지 처리 (바닥 패 배분)
+        if (response.status === 'DISTRIBUTED_FLOOR_CARD') {
+          onDistributedFloorCard?.(response.data as DistributedFloorCardData);
+        }
+
+        // ANNOUNCE_TURN_INFORMATION 상태 메시지 처리 (턴 정보)
+        if (response.status === 'ANNOUNCE_TURN_INFORMATION') {
+          onAnnounceTurnInformation?.(response.data as AnnounceTurnInformationData);
+        }
       } catch (err) {
         console.error('WS 메시지 파싱 오류:', err);
       }
@@ -152,7 +176,7 @@ export const useGameWebSocket = ({
     return () => {
       ws.close();
     };
-  }, [userId, roomId, onOpponentConnect, onPlayerReady, onGameStart, onLeaderSelection, onLeaderSelectionResult]);
+  }, [userId, roomId, onOpponentConnect, onPlayerReady, onGameStart, onLeaderSelection, onLeaderSelectionResult, onDistributeCard, onDistributedFloorCard, onAnnounceTurnInformation]);
 
   return {
     isConnected,
