@@ -3,7 +3,7 @@ import type { GameState } from '../types/game';
 import type { Card } from '../types/card';
 import { createEmptyPlayer } from '../types/game';
 import { ALL_CARDS, CARDS, type CardName } from '../types/card';
-import type { DistributedFloorCardData, AnnounceTurnInformationData } from '../types/websocket';
+import type { DistributedFloorCardData, AnnounceTurnInformationData, AcquiredCardData } from '../types/websocket';
 
 interface GameStore extends GameState {
   isGameStarted: boolean;
@@ -15,6 +15,14 @@ interface GameStore extends GameState {
   setFloorCards: (floorData: DistributedFloorCardData) => void;
   setRoundInfo: (info: AnnounceTurnInformationData, myPlayerId: string) => void;
   startGame: () => void;
+  // 카드 제출: 내 손패에서 카드를 바닥으로 이동
+  submitMyCard: (cardName: string) => void;
+  // 상대 카드 제출: 상대 손패 끝 카드를 바닥으로 이동
+  submitOpponentCard: (cardName: string) => void;
+  // 덱에서 카드 공개: 바닥으로 이동
+  revealCard: (cardName: string) => void;
+  // 카드 획득: 바닥에서 해당 플레이어로 이동
+  acquireCards: (target: 'player' | 'opponent', data: AcquiredCardData) => void;
   playCard: (card: Card) => void;
   reset: () => void;
 }
@@ -41,23 +49,14 @@ const createEmptyState = (): GameState => ({
 // 게임 시작 시 카드 분배 (실제로는 서버에서 받아올 데이터)
 const createGameState = (): GameState => {
   const shuffled = shuffleDeck(ALL_CARDS);
-
-  // 카드 분배: 플레이어 10장, 상대 10장, 바닥 8장, 나머지는 덱
-  // 실제로는 서버가 이 배치를 결정함
   const playerHand = shuffled.slice(0, 10);
   const opponentHand = shuffled.slice(10, 20);
   const field = shuffled.slice(20, 28);
   const deck = shuffled.slice(28);
 
   return {
-    player: {
-      ...createEmptyPlayer(),
-      hand: playerHand
-    },
-    opponent: {
-      ...createEmptyPlayer(),
-      hand: opponentHand
-    },
+    player: { ...createEmptyPlayer(), hand: playerHand },
+    opponent: { ...createEmptyPlayer(), hand: opponentHand },
     field,
     deck,
     currentTurn: 'player'
@@ -83,7 +82,6 @@ export const useGameStore = create<GameStore>((set) => ({
     set(state);
   },
 
-  // 서버에서 받은 내 카드 배분 데이터로 손패 설정
   setPlayerHand: (cardNames: string[]) => {
     const hand = cardNames
       .map(cardNameToCard)
@@ -93,17 +91,15 @@ export const useGameStore = create<GameStore>((set) => ({
     }));
   },
 
-  // 상대방 카드 수 설정 (보이지 않으므로 빈 카드로 수만 맞춤)
   setOpponentCardCount: (count: number) => {
     set((state) => ({
       opponent: {
         ...state.opponent,
-        hand: Array.from({ length: count }, () => ALL_CARDS[0]), // placeholder
+        hand: Array.from({ length: count }, () => ALL_CARDS[0]),
       },
     }));
   },
 
-  // 바닥 패 설정 (월별 그룹 데이터 → Card[] 변환)
   setFloorCards: (floorData: DistributedFloorCardData) => {
     const fieldCards: Card[] = [];
     for (const cardNames of Object.values(floorData)) {
@@ -115,7 +111,6 @@ export const useGameStore = create<GameStore>((set) => ({
     set({ field: fieldCards });
   },
 
-  // 라운드/턴 정보 설정 (myPlayerId: 현재 유저의 Player ID)
   setRoundInfo: (info: AnnounceTurnInformationData, myPlayerId: string) => {
     set({
       roundInfo: info,
@@ -123,9 +118,99 @@ export const useGameStore = create<GameStore>((set) => ({
     });
   },
 
-  // 게임 시작 플래그
   startGame: () => {
     set({ isGameStarted: true });
+  },
+
+  // 내가 카드를 제출: 손패에서 제거 → 바닥에 추가
+  submitMyCard: (cardName: string) => {
+    const card = cardNameToCard(cardName);
+    if (!card) return;
+    set((state) => ({
+      player: {
+        ...state.player,
+        hand: state.player.hand.filter((c) => c.name !== cardName),
+      },
+      field: [...state.field, card],
+    }));
+  },
+
+  // 상대가 카드를 제출: 손패 끝 카드 제거 → 바닥에 추가
+  submitOpponentCard: (cardName: string) => {
+    const card = cardNameToCard(cardName);
+    if (!card) return;
+    set((state) => ({
+      opponent: {
+        ...state.opponent,
+        hand: state.opponent.hand.slice(0, -1),
+      },
+      field: [...state.field, card],
+    }));
+  },
+
+  // 덱에서 카드 공개 → 바닥에 추가
+  revealCard: (cardName: string) => {
+    console.log('revealCard called:', cardName);
+    const card = cardNameToCard(cardName);
+    if (!card) {
+      console.error('Card not found:', cardName);
+      return;
+    }
+    set((state) => {
+      console.log('Adding card to field:', card);
+      return {
+        field: [...state.field, card],
+      };
+    });
+  },
+
+  // 카드 획득: 바닥에서 제거 → 해당 플레이어 captured에 추가
+  acquireCards: (target: 'player' | 'opponent', data: AcquiredCardData) => {
+    console.log('acquireCards called:', { target, data });
+    // data: { "KKUT": ["SEP_4"], "PI": ["SEP_3"] }
+    const acquiredCardNames: string[] = [];
+    const acquiredByType: Record<string, Card[]> = {};
+
+    for (const [type, names] of Object.entries(data)) {
+      acquiredByType[type] = [];
+      for (const name of names) {
+        acquiredCardNames.push(name);
+        const card = cardNameToCard(name);
+        if (card) acquiredByType[type].push(card);
+      }
+    }
+
+    console.log('Acquired cards:', { acquiredCardNames, acquiredByType });
+
+    set((state) => {
+      console.log('Current field before acquiring:', state.field);
+      // 바닥에서 획득된 카드 제거
+      const newField = state.field.filter(
+        (c) => !acquiredCardNames.includes(c.name)
+      );
+
+      const targetPlayer = state[target];
+      const newCaptured = { ...targetPlayer.captured };
+
+      // 각 타입별로 captured에 추가
+      for (const [type, cards] of Object.entries(acquiredByType)) {
+        const key = type as keyof typeof newCaptured;
+        if (newCaptured[key]) {
+          newCaptured[key] = [...newCaptured[key], ...cards];
+        }
+      }
+
+      console.log('New field after acquiring:', newField);
+      console.log('New captured:', newCaptured);
+
+      return {
+        field: newField,
+        [target]: {
+          ...targetPlayer,
+          captured: newCaptured,
+        },
+      };
+    });
   },
 
   playCard: (card: Card) => {

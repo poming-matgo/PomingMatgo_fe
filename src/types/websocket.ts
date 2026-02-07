@@ -17,6 +17,7 @@ export const EventMainType = {
   JOIN_ROOM: 'JOIN_ROOM',
   ROOM: 'ROOM',
   PREGAME: 'PREGAME',
+  GAME: 'GAME',
 } as const;
 
 export type EventMainType = typeof EventMainType[keyof typeof EventMainType];
@@ -25,6 +26,7 @@ export const EventSubType = {
   CONNECT: 'CONNECT',
   READY: 'READY',
   LEADER_SELECTION: 'LEADER_SELECTION',
+  NORMAL_SUBMIT: 'NORMAL_SUBMIT',
 } as const;
 
 export type EventSubType = typeof EventSubType[keyof typeof EventSubType];
@@ -55,6 +57,9 @@ export const ResponseStatus = {
   DISTRIBUTE_CARD: 'DISTRIBUTE_CARD',
   DISTRIBUTED_FLOOR_CARD: 'DISTRIBUTED_FLOOR_CARD',
   ANNOUNCE_TURN_INFORMATION: 'ANNOUNCE_TURN_INFORMATION',
+  SUBMIT_CARD: 'SUBMIT_CARD',
+  CARD_REVEALED: 'CARD_REVEALED',
+  ACQUIRED_CARD: 'ACQUIRED_CARD',
 } as const;
 
 export type ResponseStatus = typeof ResponseStatus[keyof typeof ResponseStatus];
@@ -93,6 +98,14 @@ export interface AnnounceTurnInformationData {
   turn: number;
   curPlayer: string; // "PLAYER_1" | "PLAYER_2"
 }
+
+// 게임 진행 관련 타입
+export interface NormalSubmitData {
+  cardIndex: string;
+}
+
+// ACQUIRED_CARD의 data: { "KKUT": ["SEP_4"], "PI": ["SEP_3"] }
+export type AcquiredCardData = Record<string, string[]>;
 
 // Legacy - 기존 호환용
 export interface RequestEvent<T = unknown> {

@@ -7,6 +7,7 @@ interface CardProps {
   faceDown?: boolean;
   onClick?: () => void;
   className?: string;
+  layoutId?: string;
 }
 
 // 월별 색상 (화투 카드 테마)
@@ -50,12 +51,14 @@ const getTypeName = (type: Type): string => {
   return names[type];
 };
 
-export const Card = ({ card, faceDown = false, onClick, className = '' }: CardProps) => {
+export const Card = ({ card, faceDown = false, onClick, className = '', layoutId }: CardProps) => {
   return (
     <motion.div
+      layoutId={layoutId}
       whileHover={{ scale: onClick ? 1.05 : 1 }}
       whileTap={{ scale: onClick ? 0.95 : 1 }}
       onClick={onClick}
+      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className={`
         relative w-16 h-24 rounded-lg border-2 shadow-md
         flex flex-col items-center justify-center

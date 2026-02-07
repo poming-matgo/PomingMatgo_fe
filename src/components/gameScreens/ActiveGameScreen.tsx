@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { Card } from '../Card';
 import { CapturedArea } from '../CapturedArea';
 import type { Player } from '../../types/game';
@@ -11,6 +11,8 @@ interface ActiveGameScreenProps {
   field: CardData[];
   currentTurn: 'player' | 'opponent';
   isDealing?: boolean;
+  onCardSubmit?: (cardIndex: number) => void;
+  onDealingComplete?: () => void;
 }
 
 const TOTAL_CARDS = 48;
@@ -26,6 +28,8 @@ export const ActiveGameScreen = ({
   field,
   currentTurn,
   isDealing = false,
+  onCardSubmit,
+  onDealingComplete,
 }: ActiveGameScreenProps) => {
   const [phase, setPhase] = useState<DealPhase>(isDealing ? 'ready' : 'done');
   const [dealtPlayerCount, setDealtPlayerCount] = useState(isDealing ? 0 : player.hand.length);
@@ -84,10 +88,13 @@ export const ActiveGameScreen = ({
     timers.push(setTimeout(() => setPhase('show-turn'), afterFloor));
 
     // 완료
-    timers.push(setTimeout(() => setPhase('done'), afterFloor + TURN_DISPLAY_DURATION));
+    timers.push(setTimeout(() => {
+      setPhase('done');
+      onDealingComplete?.();
+    }, afterFloor + TURN_DISPLAY_DURATION));
 
     return () => timers.forEach(clearTimeout);
-  }, [isDealing, player.hand, opponent.hand, field]);
+  }, [isDealing, player.hand, opponent.hand, field, onDealingComplete]);
 
   // 보이는 카드 수
   const visiblePlayerCards = isDealing && !dealingDone ? player.hand.slice(0, dealtPlayerCount) : player.hand;
@@ -102,7 +109,8 @@ export const ActiveGameScreen = ({
   }, {} as Record<number, CardData[]>);
 
   return (
-    <div className="flex-1 flex flex-col gap-1 relative">
+    <LayoutGroup>
+      <div className="flex-1 flex flex-col gap-1 relative">
       {/* 현재 턴 표시 (딜링 끝난 후) */}
       {dealingDone && (
         <div className="text-center">
@@ -201,7 +209,7 @@ export const ActiveGameScreen = ({
                               animate={{ opacity: 1, y: 0, scale: 1 }}
                               transition={{ duration: 0.3, ease: 'easeOut' }}
                             >
-                              <Card card={card} />
+                              <Card card={card} layoutId={`card-${card.name}`} />
                             </motion.div>
                           ) : (
                             <div
@@ -209,7 +217,7 @@ export const ActiveGameScreen = ({
                               className="relative"
                               style={{ marginLeft: idx === 0 ? '0' : '-44px' }}
                             >
-                              <Card card={card} />
+                              <Card card={card} layoutId={`card-${card.name}`} />
                             </div>
                           )
                         )}
@@ -232,7 +240,7 @@ export const ActiveGameScreen = ({
           </div>
           <div className="bg-gray-700 bg-opacity-40 p-2 rounded-lg min-h-[100px] flex items-center">
             <div className="flex gap-1 justify-center w-full">
-              {visiblePlayerCards.map((card) =>
+              {visiblePlayerCards.map((card, idx) =>
                 isDealing && !dealingDone ? (
                   <motion.div
                     key={card.name}
@@ -240,13 +248,18 @@ export const ActiveGameScreen = ({
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ duration: 0.3, ease: 'easeOut' }}
                   >
-                    <Card card={card} />
+                    <Card card={card} layoutId={`card-${card.name}`} />
                   </motion.div>
                 ) : (
                   <Card
                     key={card.name}
                     card={card}
-                    onClick={() => console.log('Card clicked:', card)}
+                    layoutId={`card-${card.name}`}
+                    onClick={
+                      currentTurn === 'player' && onCardSubmit
+                        ? () => onCardSubmit(idx)
+                        : undefined
+                    }
                   />
                 )
               )}
@@ -287,6 +300,7 @@ export const ActiveGameScreen = ({
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+      </div>
+    </LayoutGroup>
   );
 };

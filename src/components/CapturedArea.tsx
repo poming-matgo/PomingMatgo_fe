@@ -34,7 +34,7 @@ export const CapturedArea = ({ captured, label }: CapturedAreaProps) => {
                       className="relative"
                       style={{ marginLeft: idx === 0 ? '0' : '-32px' }}
                     >
-                      <Card card={card} className="w-12 h-16 text-xs" />
+                      <Card card={card} className="w-12 h-16 text-xs" layoutId={`card-${card.name}`} />
                     </div>
                   ))}
                 </div>

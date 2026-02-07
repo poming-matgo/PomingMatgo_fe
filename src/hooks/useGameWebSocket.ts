@@ -11,6 +11,7 @@ import {
   type DistributeCardData,
   type DistributedFloorCardData,
   type AnnounceTurnInformationData,
+  type AcquiredCardData,
 } from '../types/websocket';
 
 interface UseGameWebSocketProps {
@@ -24,6 +25,9 @@ interface UseGameWebSocketProps {
   onDistributeCard?: (player: Player, cards: DistributeCardData) => void;
   onDistributedFloorCard?: (data: DistributedFloorCardData) => void;
   onAnnounceTurnInformation?: (data: AnnounceTurnInformationData) => void;
+  onSubmitCard?: (player: Player, cardName: string) => void;
+  onCardRevealed?: (cardName: string) => void;
+  onAcquiredCard?: (player: Player, data: AcquiredCardData) => void;
 }
 
 interface UseGameWebSocketReturn {
@@ -32,6 +36,7 @@ interface UseGameWebSocketReturn {
   sendMessage: <T>(message: WebSocketRequest<T>) => void;
   sendReady: () => void;
   sendLeaderSelection: (cardIndex: number) => void;
+  sendNormalSubmit: (cardIndex: number) => void;
 }
 
 export const useGameWebSocket = ({
@@ -45,6 +50,9 @@ export const useGameWebSocket = ({
   onDistributeCard,
   onDistributedFloorCard,
   onAnnounceTurnInformation,
+  onSubmitCard,
+  onCardRevealed,
+  onAcquiredCard,
 }: UseGameWebSocketProps): UseGameWebSocketReturn => {
   const wsRef = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -86,6 +94,22 @@ export const useGameWebSocket = ({
     }
   }, []);
 
+  const sendNormalSubmit = useCallback((cardIndex: number) => {
+    const message = {
+      eventType: {
+        type: EventMainType.GAME,
+        subType: EventSubType.NORMAL_SUBMIT,
+      },
+      data: {
+        cardIndex: String(cardIndex),
+      },
+    };
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(message));
+      console.log('WS 전송:', message);
+    }
+  }, []);
+
   useEffect(() => {
     const ws = new WebSocket(DEV_CONFIG.WS_URL);
     wsRef.current = ws;
@@ -94,7 +118,6 @@ export const useGameWebSocket = ({
       console.log('WebSocket 연결됨');
       setIsConnected(true);
 
-      // 연결 즉시 JOIN_ROOM/CONNECT 메시지 전송
       const connectMessage: WebSocketRequest<JoinRoomData> = {
         eventType: {
           type: EventMainType.JOIN_ROOM,
@@ -114,7 +137,6 @@ export const useGameWebSocket = ({
         const response: WebSocketResponse = JSON.parse(event.data);
         console.log('WS 수신:', response);
 
-        // CONNECT 상태 메시지 처리
         if (response.status === 'CONNECT') {
           setConnectedPlayers((prev) => {
             if (!prev.includes(response.player)) {
@@ -125,39 +147,54 @@ export const useGameWebSocket = ({
           onOpponentConnect?.(response.player);
         }
 
-        // READY 상태 메시지 처리
         if (response.status === 'READY') {
           onPlayerReady?.(response.player);
         }
 
-        // START 상태 메시지 처리 (둘 다 준비 완료)
         if (response.status === 'START') {
           onGameStart?.();
         }
 
-        // LEADER_SELECTION 상태 메시지 처리 (카드 선택)
         if (response.status === 'LEADER_SELECTION') {
           onLeaderSelection?.(response.player, response.data as number);
         }
 
-        // LEADER_SELECTION_RESULT 상태 메시지 처리 (선공 결과)
         if (response.status === 'LEADER_SELECTION_RESULT') {
           onLeaderSelectionResult?.(response.data as LeaderSelectionResultData);
         }
 
-        // DISTRIBUTE_CARD 상태 메시지 처리 (카드 배분)
         if (response.status === 'DISTRIBUTE_CARD') {
           onDistributeCard?.(response.player, response.data as DistributeCardData);
         }
 
-        // DISTRIBUTED_FLOOR_CARD 상태 메시지 처리 (바닥 패 배분)
         if (response.status === 'DISTRIBUTED_FLOOR_CARD') {
           onDistributedFloorCard?.(response.data as DistributedFloorCardData);
         }
 
-        // ANNOUNCE_TURN_INFORMATION 상태 메시지 처리 (턴 정보)
         if (response.status === 'ANNOUNCE_TURN_INFORMATION') {
           onAnnounceTurnInformation?.(response.data as AnnounceTurnInformationData);
+        }
+
+        // 게임 진행 메시지
+        if (response.status === 'SUBMIT_CARD') {
+          console.log('✅ SUBMIT_CARD matched, calling handler');
+          onSubmitCard?.(response.player, response.data as string);
+        }
+
+        if (response.status === 'CARD_REVEALED') {
+          console.log('✅ CARD_REVEALED matched, calling handler');
+          onCardRevealed?.(response.data as string);
+        }
+
+        if (response.status === 'ACQUIRED_CARD') {
+          console.log('✅ ACQUIRED_CARD matched, calling handler');
+          onAcquiredCard?.(response.player, response.data as AcquiredCardData);
+        }
+
+        // 매칭되지 않은 게임 진행 상태 체크
+        const gameStatuses = ['SUBMIT_CARD', 'CARD_REVEALED', 'ACQUIRED_CARD'];
+        if (gameStatuses.some(s => response.status.includes(s.split('_').join('').toLowerCase()))) {
+          console.warn('❌ Game status received but not matched:', response.status);
         }
       } catch (err) {
         console.error('WS 메시지 파싱 오류:', err);
@@ -176,7 +213,7 @@ export const useGameWebSocket = ({
     return () => {
       ws.close();
     };
-  }, [userId, roomId, onOpponentConnect, onPlayerReady, onGameStart, onLeaderSelection, onLeaderSelectionResult, onDistributeCard, onDistributedFloorCard, onAnnounceTurnInformation]);
+  }, [userId, roomId, onOpponentConnect, onPlayerReady, onGameStart, onLeaderSelection, onLeaderSelectionResult, onDistributeCard, onDistributedFloorCard, onAnnounceTurnInformation, onSubmitCard, onCardRevealed, onAcquiredCard]);
 
   return {
     isConnected,
@@ -184,5 +221,6 @@ export const useGameWebSocket = ({
     sendMessage,
     sendReady,
     sendLeaderSelection,
+    sendNormalSubmit,
   };
 };
