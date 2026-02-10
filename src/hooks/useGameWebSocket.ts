@@ -61,7 +61,6 @@ export const useGameWebSocket = ({
   const sendMessage = useCallback(<T,>(message: WebSocketRequest<T>) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(message));
-      console.log('WS 전송:', message);
     }
   }, []);
 
@@ -74,7 +73,6 @@ export const useGameWebSocket = ({
     };
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(readyMessage));
-      console.log('WS 전송:', readyMessage);
     }
   }, []);
 
@@ -90,7 +88,6 @@ export const useGameWebSocket = ({
     };
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(message));
-      console.log('WS 전송:', message);
     }
   }, []);
 
@@ -106,7 +103,6 @@ export const useGameWebSocket = ({
     };
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(message));
-      console.log('WS 전송:', message);
     }
   }, []);
 
@@ -115,7 +111,6 @@ export const useGameWebSocket = ({
     wsRef.current = ws;
 
     ws.onopen = () => {
-      console.log('WebSocket 연결됨');
       setIsConnected(true);
 
       const connectMessage: WebSocketRequest<JoinRoomData> = {
@@ -129,13 +124,11 @@ export const useGameWebSocket = ({
         },
       };
       ws.send(JSON.stringify(connectMessage));
-      console.log('CONNECT 메시지 전송:', connectMessage);
     };
 
     ws.onmessage = (event) => {
       try {
         const response: WebSocketResponse = JSON.parse(event.data);
-        console.log('WS 수신:', response);
 
         if (response.status === 'CONNECT') {
           setConnectedPlayers((prev) => {
@@ -175,26 +168,16 @@ export const useGameWebSocket = ({
           onAnnounceTurnInformation?.(response.data as AnnounceTurnInformationData);
         }
 
-        // 게임 진행 메시지
         if (response.status === 'SUBMIT_CARD') {
-          console.log('✅ SUBMIT_CARD matched, calling handler');
           onSubmitCard?.(response.player, response.data as string);
         }
 
         if (response.status === 'CARD_REVEALED') {
-          console.log('✅ CARD_REVEALED matched, calling handler');
           onCardRevealed?.(response.data as string);
         }
 
         if (response.status === 'ACQUIRED_CARD') {
-          console.log('✅ ACQUIRED_CARD matched, calling handler');
           onAcquiredCard?.(response.player, response.data as AcquiredCardData);
-        }
-
-        // 매칭되지 않은 게임 진행 상태 체크
-        const gameStatuses = ['SUBMIT_CARD', 'CARD_REVEALED', 'ACQUIRED_CARD'];
-        if (gameStatuses.some(s => response.status.includes(s.split('_').join('').toLowerCase()))) {
-          console.warn('❌ Game status received but not matched:', response.status);
         }
       } catch (err) {
         console.error('WS 메시지 파싱 오류:', err);
@@ -206,7 +189,6 @@ export const useGameWebSocket = ({
     };
 
     ws.onclose = () => {
-      console.log('WebSocket 연결 종료');
       setIsConnected(false);
     };
 
