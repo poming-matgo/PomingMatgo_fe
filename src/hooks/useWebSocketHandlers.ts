@@ -1,4 +1,4 @@
-import { useCallback, RefObject } from 'react';
+import { useCallback, type RefObject } from 'react';
 import { Player } from '../types/websocket';
 import { GamePhase, SetupCondition } from '../constants/gamePhase';
 import { useGameStore } from '../store/gameStore';

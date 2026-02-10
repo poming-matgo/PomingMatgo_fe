@@ -40,7 +40,7 @@ interface UseGameWebSocketReturn {
   sendNormalSubmit: (cardIndex: number) => void;
 }
 
-export const useGameWebSocket = (props: UseGameWebSocketProps) => { // props 전체를 받음
+export const useGameWebSocket = (props: UseGameWebSocketProps): UseGameWebSocketReturn => {
   const { userId, roomId } = props;
   const wsRef = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
