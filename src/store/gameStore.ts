@@ -8,7 +8,6 @@ import type { DistributedFloorCardData, AnnounceTurnInformationData, AcquiredCar
 interface GameStore extends GameState {
   isGameStarted: boolean;
   roundInfo: AnnounceTurnInformationData | null;
-  initializeGame: () => void;
   loadGameState: (state: GameState) => void;
   setPlayerHand: (cardNames: string[]) => void;
   setOpponentCardCount: (count: number) => void;
@@ -27,16 +26,6 @@ interface GameStore extends GameState {
   reset: () => void;
 }
 
-// 카드 덱 섞기 (더미 데이터용)
-const shuffleDeck = (cards: Card[]): Card[] => {
-  const shuffled = [...cards];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-};
-
 // 빈 초기 상태 (게임 시작 전)
 const createEmptyState = (): GameState => ({
   player: createEmptyPlayer(),
@@ -45,23 +34,6 @@ const createEmptyState = (): GameState => ({
   deck: [],
   currentTurn: 'player'
 });
-
-// 게임 시작 시 카드 분배 (실제로는 서버에서 받아올 데이터)
-const createGameState = (): GameState => {
-  const shuffled = shuffleDeck(ALL_CARDS);
-  const playerHand = shuffled.slice(0, 10);
-  const opponentHand = shuffled.slice(10, 20);
-  const field = shuffled.slice(20, 28);
-  const deck = shuffled.slice(28);
-
-  return {
-    player: { ...createEmptyPlayer(), hand: playerHand },
-    opponent: { ...createEmptyPlayer(), hand: opponentHand },
-    field,
-    deck,
-    currentTurn: 'player'
-  };
-};
 
 // CardName 문자열을 Card 객체로 변환
 const cardNameToCard = (name: string): Card | null => {
@@ -73,10 +45,6 @@ export const useGameStore = create<GameStore>((set) => ({
   ...createEmptyState(),
   isGameStarted: false,
   roundInfo: null,
-
-  initializeGame: () => {
-    set({ ...createGameState(), isGameStarted: true });
-  },
 
   loadGameState: (state: GameState) => {
     set(state);
@@ -150,14 +118,11 @@ export const useGameStore = create<GameStore>((set) => ({
 
   // 덱에서 카드 공개 → 바닥에 추가
   revealCard: (cardName: string) => {
-    console.log('revealCard called:', cardName);
     const card = cardNameToCard(cardName);
     if (!card) {
-      console.error('Card not found:', cardName);
       return;
     }
     set((state) => {
-      console.log('Adding card to field:', card);
       return {
         field: [...state.field, card],
       };
@@ -166,7 +131,6 @@ export const useGameStore = create<GameStore>((set) => ({
 
   // 카드 획득: 바닥에서 제거 → 해당 플레이어 captured에 추가
   acquireCards: (target: 'player' | 'opponent', data: AcquiredCardData) => {
-    console.log('acquireCards called:', { target, data });
     // data: { "KKUT": ["SEP_4"], "PI": ["SEP_3"] }
     const acquiredCardNames: string[] = [];
     const acquiredByType: Record<string, Card[]> = {};
@@ -180,10 +144,7 @@ export const useGameStore = create<GameStore>((set) => ({
       }
     }
 
-    console.log('Acquired cards:', { acquiredCardNames, acquiredByType });
-
     set((state) => {
-      console.log('Current field before acquiring:', state.field);
       // 바닥에서 획득된 카드 제거
       const newField = state.field.filter(
         (c) => !acquiredCardNames.includes(c.name)
@@ -200,9 +161,6 @@ export const useGameStore = create<GameStore>((set) => ({
         }
       }
 
-      console.log('New field after acquiring:', newField);
-      console.log('New captured:', newCaptured);
-
       return {
         field: newField,
         [target]: {
@@ -214,7 +172,6 @@ export const useGameStore = create<GameStore>((set) => ({
   },
 
   playCard: (card: Card) => {
-    console.log('Card played:', card);
   },
 
   reset: () => {
