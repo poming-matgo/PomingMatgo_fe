@@ -1,5 +1,7 @@
 import type { Card } from './card';
 import { CardType } from './card';
+import { Player as WebSocketPlayer } from './websocket';
+import type { LeaderSelectionResultData } from './websocket';
 
 export { CardType };
 
@@ -36,3 +38,27 @@ export const createEmptyPlayer = (): Player => ({
   captured: createEmptyCapturedCards(),
   score: 0
 });
+
+// GameBoard related types
+export interface GameRouteState {
+  userId: string;
+  roomId: string;
+  initialHasOpponent: boolean;
+}
+
+export interface CardSelection {
+  player: WebSocketPlayer;
+  cardIndex: number;
+}
+
+export interface ConnectionState {
+  isConnected: boolean;
+  hasOpponent: boolean;
+  myReady: boolean;
+  opponentReady: boolean;
+}
+
+export interface LeaderState {
+  selections: CardSelection[];
+  result: LeaderSelectionResultData | null;
+}
