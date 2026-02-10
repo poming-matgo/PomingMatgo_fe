@@ -2,8 +2,8 @@ import { create } from 'zustand';
 import type { GameState } from '../types/game';
 import type { Card } from '../types/card';
 import { createEmptyPlayer } from '../types/game';
-import { ALL_CARDS, CARDS, type CardName } from '../types/card';
 import type { DistributedFloorCardData, AnnounceTurnInformationData, AcquiredCardData } from '../types/websocket';
+import { cardNameToCard, createDummyCard, convertAcquiredCards } from './gameStore.helpers';
 
 interface GameStore extends GameState {
   isGameStarted: boolean;
@@ -22,7 +22,6 @@ interface GameStore extends GameState {
   revealCard: (cardName: string) => void;
   // 카드 획득: 바닥에서 해당 플레이어로 이동
   acquireCards: (target: 'player' | 'opponent', data: AcquiredCardData) => void;
-  playCard: (card: Card) => void;
   reset: () => void;
 }
 
@@ -34,12 +33,6 @@ const createEmptyState = (): GameState => ({
   deck: [],
   currentTurn: 'player'
 });
-
-// CardName 문자열을 Card 객체로 변환
-const cardNameToCard = (name: string): Card | null => {
-  const card = CARDS[name as CardName];
-  return card || null;
-};
 
 export const useGameStore = create<GameStore>((set) => ({
   ...createEmptyState(),
@@ -63,7 +56,7 @@ export const useGameStore = create<GameStore>((set) => ({
     set((state) => ({
       opponent: {
         ...state.opponent,
-        hand: Array.from({ length: count }, () => ALL_CARDS[0]),
+        hand: Array.from({ length: count }, createDummyCard),
       },
     }));
   },
@@ -131,34 +124,26 @@ export const useGameStore = create<GameStore>((set) => ({
 
   // 카드 획득: 바닥에서 제거 → 해당 플레이어 captured에 추가
   acquireCards: (target: 'player' | 'opponent', data: AcquiredCardData) => {
-    // data: { "KKUT": ["SEP_4"], "PI": ["SEP_3"] }
-    const acquiredCardNames: string[] = [];
-    const acquiredByType: Record<string, Card[]> = {};
+    // data 예시: { "KKUT": ["SEP_4"], "PI": ["SEP_3"] }
+    const { allCardNames, cardsByType } = convertAcquiredCards(data);
 
-    for (const [type, names] of Object.entries(data)) {
-      acquiredByType[type] = [];
-      for (const name of names) {
-        acquiredCardNames.push(name);
-        const card = cardNameToCard(name);
-        if (card) acquiredByType[type].push(card);
-      }
+    if (allCardNames.length === 0) {
+      console.warn('[gameStore] No valid cards to acquire');
+      return;
     }
 
     set((state) => {
       // 바닥에서 획득된 카드 제거
       const newField = state.field.filter(
-        (c) => !acquiredCardNames.includes(c.name)
+        (c) => !allCardNames.includes(c.name)
       );
 
       const targetPlayer = state[target];
       const newCaptured = { ...targetPlayer.captured };
 
-      // 각 타입별로 captured에 추가
-      for (const [type, cards] of Object.entries(acquiredByType)) {
-        const key = type as keyof typeof newCaptured;
-        if (newCaptured[key]) {
-          newCaptured[key] = [...newCaptured[key], ...cards];
-        }
+      // 각 타입별로 captured에 추가 (타입 안전하게)
+      for (const [type, cards] of cardsByType.entries()) {
+        newCaptured[type] = [...newCaptured[type], ...cards];
       }
 
       return {
@@ -169,9 +154,6 @@ export const useGameStore = create<GameStore>((set) => ({
         },
       };
     });
-  },
-
-  playCard: (card: Card) => {
   },
 
   reset: () => {
