@@ -3,8 +3,9 @@ import { DEV_CONFIG } from '../config/dev';
 import {
   EventMainType,
   EventSubType,
+  ResponseStatus,
   type WebSocketRequest,
-  type WebSocketResponse,
+  type WebSocketResponseUnion,
   type JoinRoomData,
   type Player,
   type LeaderSelectionResultData,
@@ -39,72 +40,50 @@ interface UseGameWebSocketReturn {
   sendNormalSubmit: (cardIndex: number) => void;
 }
 
-export const useGameWebSocket = ({
-  userId,
-  roomId,
-  onOpponentConnect,
-  onPlayerReady,
-  onGameStart,
-  onLeaderSelection,
-  onLeaderSelectionResult,
-  onDistributeCard,
-  onDistributedFloorCard,
-  onAnnounceTurnInformation,
-  onSubmitCard,
-  onCardRevealed,
-  onAcquiredCard,
-}: UseGameWebSocketProps): UseGameWebSocketReturn => {
+export const useGameWebSocket = (props: UseGameWebSocketProps) => { // props 전체를 받음
+  const { userId, roomId } = props;
   const wsRef = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [connectedPlayers, setConnectedPlayers] = useState<Player[]>([]);
 
-  const sendMessage = useCallback(<T,>(message: WebSocketRequest<T>) => {
+  // 1. 최신 핸들러를 유지하기 위한 Ref
+  const callbacksRef = useRef(props);
+
+  useEffect(() => {
+    callbacksRef.current = props;
+  });
+
+  // 2. 메시지 전송 공통 로직 추출
+  const send = useCallback((message: object) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(message));
     }
   }, []);
+
+  // 3. 편의성 함수들
+  const sendRequest = useCallback(<T,>(message: WebSocketRequest<T>) => {
+    send(message);
+  }, [send]);
 
   const sendReady = useCallback(() => {
-    const readyMessage = {
-      eventType: {
-        type: EventMainType.ROOM,
-        subType: EventSubType.READY,
-      },
-    };
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(readyMessage));
-    }
-  }, []);
+    send({
+      eventType: { type: EventMainType.ROOM, subType: EventSubType.READY },
+    });
+  }, [send]);
 
   const sendLeaderSelection = useCallback((cardIndex: number) => {
-    const message = {
-      eventType: {
-        type: EventMainType.PREGAME,
-        subType: EventSubType.LEADER_SELECTION,
-      },
-      data: {
-        cardIndex: String(cardIndex),
-      },
-    };
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(message));
-    }
-  }, []);
+    send({
+      eventType: { type: EventMainType.PREGAME, subType: EventSubType.LEADER_SELECTION },
+      data: { cardIndex: String(cardIndex) },
+    });
+  }, [send]);
 
   const sendNormalSubmit = useCallback((cardIndex: number) => {
-    const message = {
-      eventType: {
-        type: EventMainType.GAME,
-        subType: EventSubType.NORMAL_SUBMIT,
-      },
-      data: {
-        cardIndex: String(cardIndex),
-      },
-    };
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(message));
-    }
-  }, []);
+    send({
+      eventType: { type: EventMainType.GAME, subType: EventSubType.NORMAL_SUBMIT },
+      data: { cardIndex: String(cardIndex) },
+    });
+  }, [send]);
 
   useEffect(() => {
     const ws = new WebSocket(DEV_CONFIG.WS_URL);
@@ -112,95 +91,90 @@ export const useGameWebSocket = ({
 
     ws.onopen = () => {
       setIsConnected(true);
-
       const connectMessage: WebSocketRequest<JoinRoomData> = {
-        eventType: {
-          type: EventMainType.JOIN_ROOM,
-          subType: EventSubType.CONNECT,
-        },
-        data: {
-          userId,
-          roomId,
-        },
+        eventType: { type: EventMainType.JOIN_ROOM, subType: EventSubType.CONNECT },
+        data: { userId, roomId },
       };
       ws.send(JSON.stringify(connectMessage));
     };
 
     ws.onmessage = (event) => {
       try {
-        const response: WebSocketResponse = JSON.parse(event.data);
+        const response: WebSocketResponseUnion = JSON.parse(event.data);
+        const handlers = callbacksRef.current;
 
-        if (response.status === 'CONNECT') {
-          setConnectedPlayers((prev) => {
-            if (!prev.includes(response.player)) {
-              return [...prev, response.player];
-            }
-            return prev;
-          });
-          onOpponentConnect?.(response.player);
-        }
+        switch (response.status) {
+          case ResponseStatus.CONNECT:
+            setConnectedPlayers((prev) => {
+              if (!prev.includes(response.player)) {
+                return [...prev, response.player];
+              }
+              return prev;
+            });
+            handlers.onOpponentConnect?.(response.player);
+            break;
 
-        if (response.status === 'READY') {
-          onPlayerReady?.(response.player);
-        }
+          case ResponseStatus.READY:
+            handlers.onPlayerReady?.(response.player);
+            break;
 
-        if (response.status === 'START') {
-          onGameStart?.();
-        }
+          case ResponseStatus.START:
+            handlers.onGameStart?.();
+            break;
 
-        if (response.status === 'LEADER_SELECTION') {
-          onLeaderSelection?.(response.player, response.data as number);
-        }
+          case ResponseStatus.LEADER_SELECTION:
+            handlers.onLeaderSelection?.(response.player, response.data);
+            break;
 
-        if (response.status === 'LEADER_SELECTION_RESULT') {
-          onLeaderSelectionResult?.(response.data as LeaderSelectionResultData);
-        }
+          case ResponseStatus.LEADER_SELECTION_RESULT:
+            handlers.onLeaderSelectionResult?.(response.data);
+            break;
 
-        if (response.status === 'DISTRIBUTE_CARD') {
-          onDistributeCard?.(response.player, response.data as DistributeCardData);
-        }
+          case ResponseStatus.DISTRIBUTE_CARD:
+            handlers.onDistributeCard?.(response.player, response.data);
+            break;
 
-        if (response.status === 'DISTRIBUTED_FLOOR_CARD') {
-          onDistributedFloorCard?.(response.data as DistributedFloorCardData);
-        }
+          case ResponseStatus.DISTRIBUTED_FLOOR_CARD:
+            handlers.onDistributedFloorCard?.(response.data);
+            break;
 
-        if (response.status === 'ANNOUNCE_TURN_INFORMATION') {
-          onAnnounceTurnInformation?.(response.data as AnnounceTurnInformationData);
-        }
+          case ResponseStatus.ANNOUNCE_TURN_INFORMATION:
+            handlers.onAnnounceTurnInformation?.(response.data);
+            break;
 
-        if (response.status === 'SUBMIT_CARD') {
-          onSubmitCard?.(response.player, response.data as string);
-        }
+          case ResponseStatus.SUBMIT_CARD:
+            handlers.onSubmitCard?.(response.player, response.data);
+            break;
 
-        if (response.status === 'CARD_REVEALED') {
-          onCardRevealed?.(response.data as string);
-        }
+          case ResponseStatus.CARD_REVEALED:
+            handlers.onCardRevealed?.(response.data);
+            break;
 
-        if (response.status === 'ACQUIRED_CARD') {
-          onAcquiredCard?.(response.player, response.data as AcquiredCardData);
+          case ResponseStatus.ACQUIRED_CARD:
+            handlers.onAcquiredCard?.(response.player, response.data);
+            break;
+
+          default:
+            const _exhaustiveCheck: never = response;
+            console.warn('Unknown message status:', _exhaustiveCheck);
         }
       } catch (err) {
         console.error('WS 메시지 파싱 오류:', err);
       }
     };
 
-    ws.onerror = (error) => {
-      console.error('WebSocket 오류:', error);
-    };
-
-    ws.onclose = () => {
-      setIsConnected(false);
-    };
+    ws.onerror = (error) => console.error('WebSocket 오류:', error);
+    ws.onclose = () => setIsConnected(false);
 
     return () => {
       ws.close();
     };
-  }, [userId, roomId, onOpponentConnect, onPlayerReady, onGameStart, onLeaderSelection, onLeaderSelectionResult, onDistributeCard, onDistributedFloorCard, onAnnounceTurnInformation, onSubmitCard, onCardRevealed, onAcquiredCard]);
+  }, [userId, roomId]);
 
   return {
     isConnected,
     connectedPlayers,
-    sendMessage,
+    sendMessage: sendRequest,
     sendReady,
     sendLeaderSelection,
     sendNormalSubmit,

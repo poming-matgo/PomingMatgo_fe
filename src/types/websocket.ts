@@ -71,6 +71,75 @@ export interface WebSocketResponse<T = unknown> {
   data: T | null;
 }
 
+// Discriminated Union for type-safe response handling
+export type WebSocketResponseUnion =
+  | {
+      player: Player;
+      status: typeof ResponseStatus.CONNECT;
+      message: string;
+      data: null;
+    }
+  | {
+      player: Player;
+      status: typeof ResponseStatus.READY;
+      message: string;
+      data: null;
+    }
+  | {
+      player: Player;
+      status: typeof ResponseStatus.START;
+      message: string;
+      data: null;
+    }
+  | {
+      player: Player;
+      status: typeof ResponseStatus.LEADER_SELECTION;
+      message: string;
+      data: number;
+    }
+  | {
+      player: Player;
+      status: typeof ResponseStatus.LEADER_SELECTION_RESULT;
+      message: string;
+      data: LeaderSelectionResultData;
+    }
+  | {
+      player: Player;
+      status: typeof ResponseStatus.DISTRIBUTE_CARD;
+      message: string;
+      data: DistributeCardData;
+    }
+  | {
+      player: Player;
+      status: typeof ResponseStatus.DISTRIBUTED_FLOOR_CARD;
+      message: string;
+      data: DistributedFloorCardData;
+    }
+  | {
+      player: Player;
+      status: typeof ResponseStatus.ANNOUNCE_TURN_INFORMATION;
+      message: string;
+      data: AnnounceTurnInformationData;
+    }
+  | {
+      player: Player;
+      status: typeof ResponseStatus.SUBMIT_CARD;
+      message: string;
+      data: string;
+    }
+  | {
+      player: Player;
+      status: typeof ResponseStatus.CARD_REVEALED;
+      message: string;
+      data: string;
+    }
+  | {
+      player: Player;
+      status: typeof ResponseStatus.ACQUIRED_CARD;
+      message: string;
+      data: AcquiredCardData;
+    };
+
 // Leader Selection 관련 타입
 export interface LeaderSelectionData {
   cardIndex: string;
