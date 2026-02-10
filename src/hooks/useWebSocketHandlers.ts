@@ -9,6 +9,11 @@ import type {
   AcquiredCardData
 } from '../types/websocket';
 
+const Target = {
+  PLAYER: 'player',
+  OPPONENT: 'opponent',
+} as const;
+
 interface UseWebSocketHandlersProps {
   myPlayer: Player;
   phaseRef: RefObject<GamePhase>;
@@ -77,7 +82,7 @@ export const useWebSocketHandlers = ({
   const handleAcquiredCard = useCallback((msgPlayer: Player, data: AcquiredCardData) => {
     const { acquireCards } = useGameStore.getState();
     enqueue(() => {
-      const target = msgPlayer === myPlayer ? 'player' : 'opponent';
+      const target = msgPlayer === myPlayer ? Target.PLAYER : Target.OPPONENT;
       acquireCards(target, data);
     });
   }, [myPlayer, enqueue]);
