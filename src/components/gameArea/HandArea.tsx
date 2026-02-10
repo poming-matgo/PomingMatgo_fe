@@ -1,6 +1,5 @@
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card } from '../Card';
-import { CapturedArea } from '../CapturedArea';
 import type { Player } from '../../types/game';
 import type { Card as CardData } from '../../types/card';
 
@@ -14,6 +13,16 @@ interface HandAreaProps {
   onCardClick?: (cardIndex: number) => void;
 }
 
+const COLS = 5;
+
+// 플레이어: 60×90, 상대방: 44×66
+const PLAYER_CARD = 'w-[60px] h-[90px]';
+const OPPONENT_CARD = 'w-[44px] h-[66px]';
+
+// 고정 높이: 2줄 기준 (카드높이 * 2 + gap)
+const PLAYER_HEIGHT = 'h-[184px]';   // 90*2 + 4
+const OPPONENT_HEIGHT = 'h-[136px]'; // 66*2 + 4
+
 export const HandArea = ({
   player,
   isOpponent,
@@ -23,76 +32,85 @@ export const HandArea = ({
   currentTurn,
   onCardClick,
 }: HandAreaProps) => {
-  const label = isOpponent ? '상대방 손패' : '내 손패';
-  const capturedLabel = isOpponent ? '상대방 획득 패' : '내 획득 패';
-  const animationY = isOpponent ? 50 : -50; // 상대방: 아래→위, 플레이어: 위→아래
+  const animationY = isOpponent ? 50 : -50;
+  const cardSize = isOpponent ? OPPONENT_CARD : PLAYER_CARD;
 
-  // 렌더링할 카드 결정
-  const renderCards = () => {
-    if (isOpponent) {
-      // 상대방: visibleCards는 숫자
-      const count = typeof visibleCards === 'number' ? visibleCards : 0;
-      return Array.from({ length: count }).map((_, idx) => {
-        const card = player.hand[idx];
-        return isDealing && !dealingDone ? (
-          <motion.div
-            key={`opponent-${idx}`}
-            initial={{ opacity: 0, y: animationY, scale: 0.3 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
-          >
-            <Card card={card} faceDown />
-          </motion.div>
-        ) : (
-          <Card key={`opponent-${idx}`} card={card} faceDown />
-        );
-      });
-    } else {
-      // 플레이어: visibleCards는 CardData[]
-      const cards = Array.isArray(visibleCards) ? visibleCards : [];
-      return cards.map((card, idx) =>
-        isDealing && !dealingDone ? (
-          <motion.div
-            key={card.name}
-            initial={{ opacity: 0, y: animationY, scale: 0.3 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
-          >
-            <Card card={card} layoutId={`card-${card.name}`} />
-          </motion.div>
-        ) : (
-          <Card
-            key={card.name}
-            card={card}
-            layoutId={`card-${card.name}`}
-            onClick={
-              currentTurn === 'player' && onCardClick
-                ? () => onCardClick(idx)
-                : undefined
-            }
-          />
-        )
+  const renderCard = (card: CardData, idx: number, faceDown: boolean) => {
+    const key = faceDown ? `opponent-${idx}` : card.name;
+
+    const cardElement = faceDown ? (
+      <Card card={card} faceDown className={cardSize} />
+    ) : (
+      <Card
+        card={card}
+        className={cardSize}
+        layoutId={`card-${card.name}`}
+        onClick={
+          currentTurn === 'player' && onCardClick
+            ? () => onCardClick(idx)
+            : undefined
+        }
+      />
+    );
+
+    if (isDealing && !dealingDone) {
+      return (
+        <motion.div
+          key={key}
+          initial={{ opacity: 0, y: animationY, scale: 0.3 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
+        >
+          {cardElement}
+        </motion.div>
       );
+    }
+
+    return (
+      <motion.div
+        key={key}
+        layout
+        initial={{ opacity: 1, scale: 1 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, y: animationY, scale: 0.5, transition: { duration: 0.25 } }}
+        transition={{ layout: { type: 'spring', stiffness: 300, damping: 30 } }}
+      >
+        {cardElement}
+      </motion.div>
+    );
+  };
+
+  const getCards = (): { card: CardData; idx: number; faceDown: boolean }[] => {
+    if (isOpponent) {
+      const count = typeof visibleCards === 'number' ? visibleCards : 0;
+      return Array.from({ length: count }).map((_, idx) => ({
+        card: player.hand[idx],
+        idx,
+        faceDown: true,
+      }));
+    } else {
+      const cards = Array.isArray(visibleCards) ? visibleCards : [];
+      return cards.map((card, idx) => ({ card, idx, faceDown: false }));
     }
   };
 
+  const allCards = getCards();
+  const topRow = allCards.slice(0, COLS);
+  const bottomRow = allCards.slice(COLS);
+  const fixedHeight = isOpponent ? OPPONENT_HEIGHT : PLAYER_HEIGHT;
+
   return (
-    <div className="flex-1 flex gap-4 w-full">
-      {/* 손패 */}
-      <div className="flex-1 flex flex-col gap-1">
-        <div className="flex items-center justify-between">
-          <div className="text-white font-bold text-sm">{label}</div>
-          <div className="text-yellow-400 font-bold text-lg">{player.score}점</div>
-        </div>
-        <div className="bg-gray-700 bg-opacity-40 p-2 rounded-lg min-h-[100px] flex items-center">
-          <div className="flex gap-1 justify-center w-full">
-            {renderCards()}
-          </div>
-        </div>
+    <div className={`flex flex-col gap-0.5 justify-center ${fixedHeight}`}>
+      <div className="flex gap-0.5">
+        <AnimatePresence mode="popLayout">
+          {topRow.map(({ card, idx, faceDown }) => renderCard(card, idx, faceDown))}
+        </AnimatePresence>
       </div>
-      {/* 획득 패 */}
-      <div className="flex-1">
-        <CapturedArea captured={player.captured} label={capturedLabel} />
+      <div className="flex gap-0.5">
+        <AnimatePresence mode="popLayout">
+          {bottomRow.map(({ card, idx, faceDown }) => renderCard(card, idx, faceDown))}
+        </AnimatePresence>
       </div>
     </div>
   );

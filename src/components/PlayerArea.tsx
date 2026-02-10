@@ -38,7 +38,6 @@ export const PlayerArea = ({ player, isOpponent = false }: PlayerAreaProps) => {
       <div className="flex-1">
         <CapturedArea
           captured={player.captured}
-          label={isOpponent ? '상대방 획득 패' : '내 획득 패'}
         />
       </div>
     </div>

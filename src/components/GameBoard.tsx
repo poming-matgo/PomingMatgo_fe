@@ -113,7 +113,7 @@ export const GameBoard = () => {
   if (!state) return null;
 
   return (
-    <div className="w-[1400px] h-[700px] bg-gradient-to-br from-green-900 via-green-800 to-green-900 p-3 flex flex-col gap-2 overflow-hidden">
+    <div className="w-[1280px] h-[720px] mx-auto bg-gradient-to-br from-green-900 via-green-800 to-green-900 p-3 flex flex-col gap-1 overflow-hidden rounded-xl shadow-2xl shrink-0">
       <GameHeader
         userId={userId}
         isConnected={isConnected}

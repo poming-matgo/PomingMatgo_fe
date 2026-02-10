@@ -40,17 +40,6 @@ const getTypeIcon = (type: Type): string => {
   return icons[type];
 };
 
-// 카드 타입 한글명
-const getTypeName = (type: Type): string => {
-  const names: Record<Type, string> = {
-    [Type.GWANG]: '광',
-    [Type.KKUT]: '끗',
-    [Type.DDI]: '띠',
-    [Type.PI]: '피'
-  };
-  return names[type];
-};
-
 export const Card = ({ card, faceDown = false, onClick, className = '', layoutId }: CardProps) => {
   return (
     <motion.div
@@ -60,7 +49,7 @@ export const Card = ({ card, faceDown = false, onClick, className = '', layoutId
       onClick={onClick}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className={`
-        relative w-16 h-24 rounded-lg border-2 shadow-md
+        relative w-[72px] h-[108px] rounded-lg border-2 shadow-md
         flex flex-col items-center justify-center
         ${onClick ? 'cursor-pointer' : ''}
         ${faceDown
@@ -74,9 +63,7 @@ export const Card = ({ card, faceDown = false, onClick, className = '', layoutId
         <div className="text-white text-2xl font-bold">花</div>
       ) : (
         <>
-          <div className="text-2xl mb-1">{getTypeIcon(card.type)}</div>
-          <div className="text-xs font-bold">{card.month}월</div>
-          <div className="text-xs">{getTypeName(card.type)}</div>
+          <div className="text-2xl">{getTypeIcon(card.type)}</div>
           {card.specialType && (
             <div className="absolute top-0 right-0 bg-yellow-400 text-xs px-1 rounded-bl">
               ★
