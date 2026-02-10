@@ -22,6 +22,12 @@ import { WaitingScreen } from './gameScreens/WaitingScreen';
 import { LeaderSelectionScreen } from './gameScreens/LeaderSelectionScreen';
 import { ActiveGameScreen } from './gameScreens/ActiveGameScreen';
 
+const SetupCondition = {
+  HAND: 'HAND',
+  FLOOR: 'FLOOR',
+  TURN: 'TURN',
+} as const;
+
 // 1. 게임 진행 단계 정의 (State Machine)
 const GamePhase = {
   WAITING: 'WAITING',
@@ -101,7 +107,7 @@ export const GameBoard = () => {
   useEffect(() => {
     // 선 잡기 결과를 받은 후 필수 데이터가 모두 도착하면 SETUP 단계로 진입
     if (phase === GamePhase.LEADER_SELECTION && leaderState.result) {
-      const requiredConditions = ['HAND', 'FLOOR', 'TURN'];
+      const requiredConditions = [SetupCondition.HAND, SetupCondition.FLOOR, SetupCondition.TURN];
       const isReady = requiredConditions.every((cond) => setupConditions.has(cond));
 
       // 타이머가 아직 설정되지 않았고, 모든 데이터가 준비되었으면 타이머 설정
@@ -172,14 +178,14 @@ export const GameBoard = () => {
       setPlayerHand(cards);
       setOpponentCardCount(cards.length);
     }
-    setSetupConditions(prev => new Set(prev).add('HAND'));
+    setSetupConditions(prev => new Set(prev).add(SetupCondition.HAND));
   }, [myPlayer]);
 
   // [세팅] 바닥 패 배치
   const handleDistributedFloorCard = useCallback((data: DistributedFloorCardData) => {
     const { setFloorCards } = useGameStore.getState();
     setFloorCards(data);
-    setSetupConditions(prev => new Set(prev).add('FLOOR'));
+    setSetupConditions(prev => new Set(prev).add(SetupCondition.FLOOR));
   }, []);
 
   // [세팅 & 플레이] 턴 정보 알림
@@ -188,7 +194,7 @@ export const GameBoard = () => {
     if (phaseRef.current === GamePhase.SETUP || phaseRef.current === GamePhase.LEADER_SELECTION) {
       // 초기 세팅 단계에서의 턴 정보
       setRoundInfo(data, myPlayer);
-      setSetupConditions(prev => new Set(prev).add('TURN'));
+      setSetupConditions(prev => new Set(prev).add(SetupCondition.TURN));
     } else {
       // 게임 중 턴 변경 (애니메이션 큐 사용)
       enqueue(() => setRoundInfo(data, myPlayer));
