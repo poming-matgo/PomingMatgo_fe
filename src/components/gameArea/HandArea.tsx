@@ -94,19 +94,19 @@ export const HandArea = ({
   };
 
   const allCards = getCards();
-  const half = Math.ceil(allCards.length / 2);
-  const topRow = allCards.slice(0, half);
-  const bottomRow = allCards.slice(half);
+  const ROW_SIZE = 5;
+  const topRow = allCards.slice(0, ROW_SIZE);
+  const bottomRow = allCards.slice(ROW_SIZE);
   const fixedHeight = isOpponent ? OPPONENT_HEIGHT : PLAYER_HEIGHT;
 
   return (
-    <div className={`flex flex-col gap-0.5 justify-center ${fixedHeight}`}>
-      <div className="flex gap-0.5">
+    <div className={`flex flex-col gap-0.5 justify-start ${fixedHeight}`}>
+      <div className="grid grid-cols-5 gap-0.5">
         <AnimatePresence mode="popLayout">
           {topRow.map(({ card, idx, faceDown }) => renderCard(card, idx, faceDown))}
         </AnimatePresence>
       </div>
-      <div className="flex gap-0.5">
+      <div className="grid grid-cols-5 gap-0.5">
         <AnimatePresence mode="popLayout">
           {bottomRow.map(({ card, idx, faceDown }) => renderCard(card, idx, faceDown))}
         </AnimatePresence>
