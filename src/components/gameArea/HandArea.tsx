@@ -13,8 +13,6 @@ interface HandAreaProps {
   onCardClick?: (cardIndex: number) => void;
 }
 
-const COLS = 5;
-
 // 플레이어: 60×90, 상대방: 44×66
 const PLAYER_CARD = 'w-[60px] h-[90px]';
 const OPPONENT_CARD = 'w-[44px] h-[66px]';
@@ -96,8 +94,9 @@ export const HandArea = ({
   };
 
   const allCards = getCards();
-  const topRow = allCards.slice(0, COLS);
-  const bottomRow = allCards.slice(COLS);
+  const half = Math.ceil(allCards.length / 2);
+  const topRow = allCards.slice(0, half);
+  const bottomRow = allCards.slice(half);
   const fixedHeight = isOpponent ? OPPONENT_HEIGHT : PLAYER_HEIGHT;
 
   return (
