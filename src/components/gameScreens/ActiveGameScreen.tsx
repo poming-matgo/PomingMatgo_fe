@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { LayoutGroup } from 'framer-motion';
 import { useDealingAnimation } from '../../hooks/useDealingAnimation';
 import { HandArea } from '../gameArea/HandArea';
@@ -75,10 +75,21 @@ export const ActiveGameScreen = ({
     [isDealing, dealingDone, player.hand, visiblePlayerCards]
   );
 
+  const visibleOpponentHand = useMemo(
+    () => (isDealing && !dealingDone ? opponent.hand.slice(0, visibleOpponentCount) : opponent.hand),
+    [isDealing, dealingDone, opponent.hand, visibleOpponentCount]
+  );
+
   const visibleFloorCards = useMemo(
     () => (isDealing && !dealingDone ? field.slice(0, visibleFloorCount) : field),
     [isDealing, dealingDone, field, visibleFloorCount]
   );
+
+  const handleCardClick = useCallback((cardName: string) => {
+    if (!onCardSubmit) return;
+    const index = player.hand.findIndex(c => c.name === cardName);
+    if (index !== -1) onCardSubmit(index);
+  }, [onCardSubmit, player.hand]);
 
   return (
     <LayoutGroup>
@@ -93,9 +104,8 @@ export const ActiveGameScreen = ({
           {/* 손패 5×2 */}
           <div className="flex-1 flex justify-center">
             <HandArea
-              player={opponent}
+              cards={visibleOpponentHand}
               isOpponent={true}
-              visibleCards={isDealing && !dealingDone ? visibleOpponentCount : opponent.hand.length}
               isDealing={isDealing}
               dealingDone={dealingDone}
               currentTurn={currentTurn}
@@ -135,13 +145,12 @@ export const ActiveGameScreen = ({
           {/* 손패 5×2 */}
           <div className="flex-1 flex justify-center">
             <HandArea
-              player={player}
+              cards={visiblePlayerHand}
               isOpponent={false}
-              visibleCards={visiblePlayerHand}
               isDealing={isDealing}
               dealingDone={dealingDone}
               currentTurn={currentTurn}
-              onCardClick={onCardSubmit}
+              onCardClick={handleCardClick}
             />
           </div>
           {/* Scoreboard HUD */}

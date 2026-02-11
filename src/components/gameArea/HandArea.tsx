@@ -1,72 +1,68 @@
+import { useMemo } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { AnimatedCard } from './AnimatedCard';
-import type { Player } from '../../types/game';
 import type { Card as CardData } from '../../types/card';
 
 interface HandAreaProps {
-  player: Player;
+  cards: CardData[];
   isOpponent: boolean;
-  visibleCards: CardData[] | number;
   isDealing: boolean;
   dealingDone: boolean;
   currentTurn: 'player' | 'opponent';
-  onCardClick?: (cardIndex: number) => void;
+  onCardClick?: (cardName: string) => void;
 }
 
-const PLAYER_CARD = 'w-[60px] h-[90px]';
-const OPPONENT_CARD = 'w-[44px] h-[66px]';
-const PLAYER_HEIGHT = 'h-[184px]';
-const OPPONENT_HEIGHT = 'h-[136px]';
-const ROW_SIZE = 5;
+const PLAYER_CARD_SIZE = { w: 60, h: 90 };
+const OPPONENT_CARD_SIZE = { w: 44, h: 66 };
+const COLS = 5;
+const GAP = 2;
 
 export const HandArea = ({
-  player,
+  cards,
   isOpponent,
-  visibleCards,
   isDealing,
   dealingDone,
   currentTurn,
   onCardClick,
 }: HandAreaProps) => {
   const animationY = isOpponent ? 50 : -50;
-  const cardSize = isOpponent ? OPPONENT_CARD : PLAYER_CARD;
-  const fixedHeight = isOpponent ? OPPONENT_HEIGHT : PLAYER_HEIGHT;
+  const { w, h } = isOpponent ? OPPONENT_CARD_SIZE : PLAYER_CARD_SIZE;
+  
+  const rows = 2;
+  const gridHeight = rows * h + (rows - 1) * GAP;
 
-  const allCards: { card: CardData; idx: number; faceDown: boolean }[] = isOpponent
-    ? Array.from({ length: typeof visibleCards === 'number' ? visibleCards : 0 }).map((_, idx) => ({
-        card: player.hand[idx],
-        idx,
-        faceDown: true,
-      }))
-    : (Array.isArray(visibleCards) ? visibleCards : []).map((card, idx) => ({
-        card,
-        idx,
-        faceDown: false,
-      }));
-
-  const rows = [allCards.slice(0, ROW_SIZE), allCards.slice(ROW_SIZE)];
+  const allCards = useMemo(
+    () => cards.map((card) => ({ card, faceDown: isOpponent })),
+    [cards, isOpponent],
+  );
 
   return (
-    <div className={`flex flex-col gap-0.5 justify-start ${fixedHeight}`}>
-      {rows.map((row, rowIdx) => (
-        <div key={rowIdx} className="grid grid-cols-5 gap-0.5">
-          <AnimatePresence mode="popLayout">
-            {row.map(({ card, idx, faceDown }) => (
-              <AnimatedCard
-                key={card.name}
-                card={card}
-                faceDown={faceDown}
-                isDealing={isDealing}
-                dealingDone={dealingDone}
-                animationY={animationY}
-                cardSize={cardSize}
-                currentTurn={currentTurn}
-                onCardClick={onCardClick ? () => onCardClick(idx) : undefined}
-              />
-            ))}
-          </AnimatePresence>
-        </div>
-      ))}
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(${COLS}, ${w}px)`,
+        gridAutoRows: `${h}px`,
+        gap: `${GAP}px`,
+        height: `${gridHeight}px`, 
+        transition: 'height 0.3s ease' // 줄어들거나 늘어날 때 부드럽게
+      }}
+    >
+      <AnimatePresence mode="popLayout">
+        {allCards.map(({ card, faceDown }) => (
+          <AnimatedCard
+            key={card.name}
+            card={card}
+            faceDown={faceDown}
+            isDealing={isDealing}
+            dealingDone={dealingDone}
+            animationY={animationY}
+            width={w}  // 숫자 그대로 전달
+            height={h} // 숫자 그대로 전달
+            currentTurn={currentTurn}
+            onCardClick={onCardClick ? () => onCardClick(card.name) : undefined}
+          />
+        ))}
+      </AnimatePresence>
     </div>
   );
 };
