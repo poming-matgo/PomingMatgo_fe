@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { motion, type Variants, type Transition } from 'framer-motion';
 import { Card } from '../Card';
 import type { Card as CardData } from '../../types/card';
