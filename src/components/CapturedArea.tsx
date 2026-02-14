@@ -18,7 +18,7 @@ const CardStack = ({ cards, cardSize }: { cards: CardData[]; cardSize: string })
           key={card.name}
           className="relative"
           style={{
-            marginLeft: idx === 0 ? '0' : '-22px',
+            marginLeft: idx === 0 ? '0' : '-20px',
             zIndex: idx,
           }}
           initial={{ opacity: 0, scale: 0.5, y: -20 }}
@@ -42,7 +42,7 @@ export const CapturedArea = ({ captured }: CapturedAreaProps) => {
   const piBottomRow = piCards.slice(0, PI_ROW_MAX);
   const piTopRow = piCards.slice(PI_ROW_MAX);
 
-  const cardSize = 'w-9 h-[54px]';
+  const cardSize = 'w-[32px] h-[59px]';
 
   return (
     <div className="grid grid-rows-2 grid-cols-[auto_auto_1fr] gap-x-2 gap-y-1 w-full items-center">

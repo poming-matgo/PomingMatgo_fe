@@ -38,7 +38,7 @@ export const FloorCardGroup = memo(function FloorCardGroup({
             exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
           >
-            <Card card={card} className="w-[56px] h-[84px]" layoutId={`card-${card.name}`} />
+            <Card card={card} className="w-[46px] h-[67px]" layoutId={`card-${card.name}`} />
           </motion.div>
         ))}
       </AnimatePresence>
