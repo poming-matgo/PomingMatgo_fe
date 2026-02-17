@@ -8,6 +8,7 @@ import { cardNameToCard, createDummyCard, convertAcquiredCards } from './gameSto
 interface GameStore extends GameState {
   isGameStarted: boolean;
   roundInfo: AnnounceTurnInformationData | null;
+  floorCardChoices: string[] | null;
   loadGameState: (state: GameState) => void;
   setPlayerHand: (cardNames: string[]) => void;
   setOpponentCardCount: (count: number) => void;
@@ -22,6 +23,8 @@ interface GameStore extends GameState {
   revealCard: (cardName: string) => void;
   // 카드 획득: 바닥에서 해당 플레이어로 이동
   acquireCards: (target: 'player' | 'opponent', data: AcquiredCardData) => void;
+  // 바닥 카드 선택지 설정/해제
+  setFloorCardChoices: (choices: string[] | null) => void;
   reset: () => void;
 }
 
@@ -38,6 +41,7 @@ export const useGameStore = create<GameStore>((set) => ({
   ...createEmptyState(),
   isGameStarted: false,
   roundInfo: null,
+  floorCardChoices: null,
 
   loadGameState: (state: GameState) => {
     set(state);
@@ -156,7 +160,11 @@ export const useGameStore = create<GameStore>((set) => ({
     });
   },
 
+  setFloorCardChoices: (choices: string[] | null) => {
+    set({ floorCardChoices: choices });
+  },
+
   reset: () => {
-    set({ ...createEmptyState(), isGameStarted: false, roundInfo: null });
+    set({ ...createEmptyState(), isGameStarted: false, roundInfo: null, floorCardChoices: null });
   },
 }));

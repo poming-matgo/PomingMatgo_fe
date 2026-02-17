@@ -27,6 +27,7 @@ export const EventSubType = {
   READY: 'READY',
   LEADER_SELECTION: 'LEADER_SELECTION',
   NORMAL_SUBMIT: 'NORMAL_SUBMIT',
+  FLOOR_SELECT: 'FLOOR_SELECT',
 } as const;
 
 export type EventSubType = typeof EventSubType[keyof typeof EventSubType];
@@ -60,6 +61,7 @@ export const ResponseStatus = {
   SUBMIT_CARD: 'SUBMIT_CARD',
   CARD_REVEALED: 'CARD_REVEALED',
   ACQUIRED_CARD: 'ACQUIRED_CARD',
+  CHOOSE_FLOOR_CARD: 'CHOOSE_FLOOR_CARD',
 } as const;
 
 export type ResponseStatus = typeof ResponseStatus[keyof typeof ResponseStatus];
@@ -138,6 +140,12 @@ export type WebSocketResponseUnion =
       status: typeof ResponseStatus.ACQUIRED_CARD;
       message: string;
       data: AcquiredCardData;
+    }
+  | {
+      player: Player;
+      status: typeof ResponseStatus.CHOOSE_FLOOR_CARD;
+      message: string;
+      data: ChooseFloorCardData;
     };
 
 // Leader Selection 관련 타입
@@ -166,6 +174,13 @@ export interface AnnounceTurnInformationData {
   round: number;
   turn: number;
   curPlayer: string; // "PLAYER_1" | "PLAYER_2"
+}
+
+// 바닥 카드 선택 관련 타입
+export type ChooseFloorCardData = string[]; // ["JAN_4", "JAN_1"]
+
+export interface FloorSelectData {
+  cardIndex: string;
 }
 
 // 게임 진행 관련 타입

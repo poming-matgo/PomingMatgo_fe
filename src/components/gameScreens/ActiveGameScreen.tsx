@@ -16,6 +16,8 @@ interface ActiveGameScreenProps {
   isDealing?: boolean;
   onCardSubmit?: (cardIndex: number) => void;
   onDealingComplete?: () => void;
+  floorCardChoices?: string[] | null;
+  onFloorCardSelect?: (cardIndex: number) => void;
 }
 
 /** 반투명 검정 라운드 박스 HUD */
@@ -54,6 +56,8 @@ export const ActiveGameScreen = ({
   isDealing = false,
   onCardSubmit,
   onDealingComplete,
+  floorCardChoices,
+  onFloorCardSelect,
 }: ActiveGameScreenProps) => {
   const {
     phase,
@@ -133,6 +137,8 @@ export const ActiveGameScreen = ({
             dealingDone={dealingDone}
             deckCount={deckDisplayCount}
             deckSampleCard={field[0] ?? player.hand[0]}
+            floorCardChoices={floorCardChoices}
+            onFloorCardSelect={onFloorCardSelect}
           />
         </div>
 

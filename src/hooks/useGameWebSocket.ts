@@ -13,6 +13,7 @@ import {
   type DistributedFloorCardData,
   type AnnounceTurnInformationData,
   type AcquiredCardData,
+  type ChooseFloorCardData,
 } from '../types/websocket';
 
 interface UseGameWebSocketProps {
@@ -29,6 +30,7 @@ interface UseGameWebSocketProps {
   onSubmitCard?: (player: Player, cardName: string) => void;
   onCardRevealed?: (cardName: string) => void;
   onAcquiredCard?: (player: Player, data: AcquiredCardData) => void;
+  onChooseFloorCard?: (player: Player, data: ChooseFloorCardData) => void;
 }
 
 interface UseGameWebSocketReturn {
@@ -38,6 +40,7 @@ interface UseGameWebSocketReturn {
   sendReady: () => void;
   sendLeaderSelection: (cardIndex: number) => void;
   sendNormalSubmit: (cardIndex: number) => void;
+  sendFloorSelect: (cardIndex: number) => void;
 }
 
 export const useGameWebSocket = (props: UseGameWebSocketProps): UseGameWebSocketReturn => {
@@ -81,6 +84,13 @@ export const useGameWebSocket = (props: UseGameWebSocketProps): UseGameWebSocket
   const sendNormalSubmit = useCallback((cardIndex: number) => {
     send({
       eventType: { type: EventMainType.GAME, subType: EventSubType.NORMAL_SUBMIT },
+      data: { cardIndex: String(cardIndex) },
+    });
+  }, [send]);
+
+  const sendFloorSelect = useCallback((cardIndex: number) => {
+    send({
+      eventType: { type: EventMainType.GAME, subType: EventSubType.FLOOR_SELECT },
       data: { cardIndex: String(cardIndex) },
     });
   }, [send]);
@@ -154,9 +164,14 @@ export const useGameWebSocket = (props: UseGameWebSocketProps): UseGameWebSocket
             handlers.onAcquiredCard?.(response.player, response.data);
             break;
 
-          default:
+          case ResponseStatus.CHOOSE_FLOOR_CARD:
+            handlers.onChooseFloorCard?.(response.player, response.data);
+            break;
+
+          default: {
             const _exhaustiveCheck: never = response;
             console.warn('Unknown message status:', _exhaustiveCheck);
+          }
         }
       } catch (err) {
         console.error('WS 메시지 파싱 오류:', err);
@@ -178,5 +193,6 @@ export const useGameWebSocket = (props: UseGameWebSocketProps): UseGameWebSocket
     sendReady,
     sendLeaderSelection,
     sendNormalSubmit,
+    sendFloorSelect,
   };
 };

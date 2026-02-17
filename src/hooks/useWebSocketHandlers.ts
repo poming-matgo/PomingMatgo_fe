@@ -6,7 +6,8 @@ import type {
   DistributeCardData,
   DistributedFloorCardData,
   AnnounceTurnInformationData,
-  AcquiredCardData
+  AcquiredCardData,
+  ChooseFloorCardData,
 } from '../types/websocket';
 
 const Target = {
@@ -18,7 +19,7 @@ interface UseWebSocketHandlersProps {
   myPlayer: Player;
   phaseRef: RefObject<GamePhase>;
   addSetupCondition: (condition: string) => void;
-  enqueue: (fn: () => void) => void;
+  enqueue: (fn: () => void, options?: { interactive?: boolean }) => void;
 }
 
 export const useWebSocketHandlers = ({
@@ -78,6 +79,14 @@ export const useWebSocketHandlers = ({
     });
   }, [enqueue]);
 
+  // [플레이] 바닥 카드 선택 요청 (유저 인터랙션 대기)
+  const handleChooseFloorCard = useCallback((_msgPlayer: Player, data: ChooseFloorCardData) => {
+    const { setFloorCardChoices } = useGameStore.getState();
+    enqueue(() => {
+      setFloorCardChoices(data);
+    }, { interactive: true });
+  }, [enqueue]);
+
   // [플레이] 카드 획득 (쪽/뻑 포함)
   const handleAcquiredCard = useCallback((msgPlayer: Player, data: AcquiredCardData) => {
     const { acquireCards } = useGameStore.getState();
@@ -94,5 +103,6 @@ export const useWebSocketHandlers = ({
     handleSubmitCard,
     handleCardRevealed,
     handleAcquiredCard,
+    handleChooseFloorCard,
   };
 };

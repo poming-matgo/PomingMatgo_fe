@@ -40,9 +40,10 @@ export const GameBoard = () => {
   const opponent = useGameStore(state => state.opponent);
   const field = useGameStore(state => state.field);
   const currentTurn = useGameStore(state => state.currentTurn);
+  const floorCardChoices = useGameStore(state => state.floorCardChoices);
   const reset = useGameStore(state => state.reset);
 
-  const { enqueue } = useAnimationQueue(800);
+  const { enqueue, resume } = useAnimationQueue(800);
 
   // --- 3. Custom Hooks for State Management ---
   const { leaderState, handleLeaderSelection, handleLeaderSelectionResult } = useLeaderState();
@@ -73,6 +74,7 @@ export const GameBoard = () => {
     handleSubmitCard,
     handleCardRevealed,
     handleAcquiredCard,
+    handleChooseFloorCard,
   } = useWebSocketHandlers({
     myPlayer,
     phaseRef,
@@ -91,7 +93,7 @@ export const GameBoard = () => {
   }, [setPhase]);
 
   // --- 6. WebSocket Connection ---
-  const { isConnected, connectedPlayers, sendReady, sendLeaderSelection, sendNormalSubmit } = useGameWebSocket({
+  const { isConnected, connectedPlayers, sendReady, sendLeaderSelection, sendNormalSubmit, sendFloorSelect } = useGameWebSocket({
     userId,
     roomId,
     onOpponentConnect: handleOpponentConnect,
@@ -105,7 +107,14 @@ export const GameBoard = () => {
     onSubmitCard: handleSubmitCard,
     onCardRevealed: handleCardRevealed,
     onAcquiredCard: handleAcquiredCard,
+    onChooseFloorCard: handleChooseFloorCard,
   });
+
+  const handleFloorCardSelect = useCallback((cardIndex: number) => {
+    sendFloorSelect(cardIndex);
+    useGameStore.getState().setFloorCardChoices(null);
+    resume(); // 애니메이션 큐 진행 재개
+  }, [sendFloorSelect, resume]);
 
   const hasOpponent = connectionState.hasOpponent || connectedPlayers.length >= 2;
 
@@ -152,6 +161,8 @@ export const GameBoard = () => {
           isDealing={phase === GamePhase.SETUP}
           onCardSubmit={sendNormalSubmit}
           onDealingComplete={handleDealingComplete}
+          floorCardChoices={floorCardChoices}
+          onFloorCardSelect={handleFloorCardSelect}
         />
       )}
     </div>
