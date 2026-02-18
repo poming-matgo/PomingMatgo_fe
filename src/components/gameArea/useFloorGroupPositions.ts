@@ -4,7 +4,7 @@ import {
   getSortedGroups,
   computeGroupPositions,
   type MonthGroup,
-  type Position,
+  type CachedGroup,
 } from './floorLayout';
 
 /**
@@ -14,8 +14,8 @@ import {
  * - 캐시 갱신은 useEffect에서 수행 (Concurrent Mode safe)
  */
 export function useFloorGroupPositions(cards: Card[]) {
-  const cacheRef = useRef<Map<string, Position>>(new Map());
-  const [cache, setCache] = useState<ReadonlyMap<string, Position>>(() => new Map());
+  const cacheRef = useRef<Map<string, CachedGroup>>(new Map());
+  const [cache, setCache] = useState<ReadonlyMap<string, CachedGroup>>(() => new Map());
 
   const sortedGroups: MonthGroup[] = useMemo(() => getSortedGroups(cards), [cards]);
 
