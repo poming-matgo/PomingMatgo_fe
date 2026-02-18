@@ -7,6 +7,7 @@ interface CardProps {
   faceDown?: boolean;
   onClick?: () => void;
   className?: string;
+  style?: React.CSSProperties;
   layoutId?: string;
 }
 
@@ -40,7 +41,7 @@ const getTypeIcon = (type: Type): string => {
   return icons[type];
 };
 
-export const Card = ({ card, faceDown = false, onClick, className = '', layoutId }: CardProps) => {
+export const Card = ({ card, faceDown = false, onClick, className = '', style, layoutId }: CardProps) => {
   return (
     <motion.div
       layoutId={layoutId}
@@ -48,6 +49,7 @@ export const Card = ({ card, faceDown = false, onClick, className = '', layoutId
       whileTap={{ scale: onClick ? 0.95 : 1 }}
       onClick={onClick}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      style={style}
       className={`
         relative w-[72px] h-[108px] rounded-lg border-2 shadow-md
         flex flex-col items-center justify-center

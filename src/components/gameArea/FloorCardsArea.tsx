@@ -28,9 +28,12 @@ export const FloorCardsArea = ({
   const { sortedGroups, positions } = useFloorGroupPositions(cards);
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center">
-      {/* 덱: 정중앙 */}
-      <div className="absolute z-10">
+    <div className="relative w-full h-full overflow-hidden">
+      {/* 덱: 컨테이너 정중앙 */}
+      <div
+        className="absolute z-10"
+        style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}
+      >
         <DeckDisplay
           count={deckCount}
           sampleCard={deckSampleCard}
@@ -39,7 +42,7 @@ export const FloorCardsArea = ({
         />
       </div>
 
-      {/* 바닥패: 월별 그룹 단위로 흩뿌리기 */}
+      {/* 바닥패: calc(50% + offset) 으로 배치 */}
       <AnimatePresence>
         {sortedGroups.map(([month, monthCards], groupIdx) => {
           const pos = positions[groupIdx];
