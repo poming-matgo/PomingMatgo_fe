@@ -89,15 +89,21 @@ export const useGameStore = create<GameStore>((set) => ({
 
   // 내가 카드를 제출: 손패에서 제거 → 바닥에 추가
   submitMyCard: (cardName: string) => {
-    const card = cardNameToCard(cardName);
-    if (!card) return;
-    set((state) => ({
-      player: {
-        ...state.player,
-        hand: state.player.hand.filter((c) => c.name !== cardName),
-      },
-      field: [...state.field, card],
-    }));
+    set((state) => {
+      const cardInHand = state.player.hand.find((c) => c.name === cardName);
+      if (!cardInHand) {
+        console.warn(`[submitMyCard] Card not found in hand: ${cardName}`,
+          'current hand:', state.player.hand.map(c => c.name));
+        return state;
+      }
+      return {
+        player: {
+          ...state.player,
+          hand: state.player.hand.filter((c) => c.name !== cardName),
+        },
+        field: [...state.field, cardInHand],
+      };
+    });
   },
 
   // 상대가 카드를 제출: 손패 끝 카드 제거 → 바닥에 추가

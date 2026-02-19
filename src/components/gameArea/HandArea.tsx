@@ -32,7 +32,12 @@ export const HandArea = ({
   const gridHeight = rows * h + (rows - 1) * GAP;
 
   const allCards = useMemo(
-    () => cards.map((card) => ({ card, faceDown: isOpponent })),
+    () => cards.map((card, idx) => ({
+      card,
+      faceDown: isOpponent,
+      // 상대 더미카드는 모두 같은 name이므로 index 기반 키 사용
+      key: isOpponent ? `opponent-${idx}` : card.name,
+    })),
     [cards, isOpponent],
   );
 
@@ -48,9 +53,9 @@ export const HandArea = ({
       }}
     >
       <AnimatePresence mode="popLayout">
-        {allCards.map(({ card, faceDown }) => (
+        {allCards.map(({ card, faceDown, key }) => (
           <AnimatedCard
-            key={card.name}
+            key={key}
             card={card}
             faceDown={faceDown}
             isDealing={isDealing}

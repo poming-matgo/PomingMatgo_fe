@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { LayoutGroup } from 'framer-motion';
 import { useDealingAnimation } from '../../hooks/useDealingAnimation';
 import { HandArea } from '../gameArea/HandArea';
@@ -89,10 +89,20 @@ export const ActiveGameScreen = ({
     [isDealing, dealingDone, field, visibleFloorCount]
   );
 
+  // 카드 제출 후 턴이 바뀌기 전 중복 클릭 방지
+  const isSubmittingRef = useRef(false);
+
+  useEffect(() => {
+    isSubmittingRef.current = false;
+  }, [currentTurn]);
+
   const handleCardClick = useCallback((cardName: string) => {
-    if (!onCardSubmit) return;
+    if (!onCardSubmit || isSubmittingRef.current) return;
     const index = player.hand.findIndex(c => c.name === cardName);
-    if (index !== -1) onCardSubmit(index);
+    if (index !== -1) {
+      isSubmittingRef.current = true;
+      onCardSubmit(index);
+    }
   }, [onCardSubmit, player.hand]);
 
   return (
