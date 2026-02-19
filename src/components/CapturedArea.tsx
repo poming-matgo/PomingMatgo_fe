@@ -5,11 +5,11 @@ import type { CapturedCards } from '../types/game';
 import type { Card as CardData } from '../types/card';
 
 // --- Constants ---
-const PI_ROW_MAX = 10;
-const CARD_OVERLAP = -20;
+const PI_ROW_MAX = 13;
+const CARD_OVERLAP = -18;
 
-const CARD_SIZE_CLASS = "w-[32px] h-[59px] shrink-0"; 
-const ROW_MIN_HEIGHT = "min-h-[59px]";
+const CARD_SIZE_CLASS = "w-[35px] h-[65px] shrink-0"; 
+const ROW_MIN_HEIGHT = "min-h-[65px]";
 const ROW_CLASSES = `flex items-center ${ROW_MIN_HEIGHT}`;
 
 // --- Sub Components ---
@@ -46,7 +46,7 @@ export const CapturedArea = ({ captured }: { captured: CapturedCards }) => {
   const piTopRow = piCards.slice(PI_ROW_MAX);
 
   return (
-    <div className="grid grid-rows-2 grid-cols-[auto_auto_1fr] gap-x-2 gap-y-1 w-full items-center">
+    <div className="grid grid-rows-2 grid-cols-[auto_auto_1fr] gap-x-12 gap-y-1 w-full items-center">
       {/* Row 1: 광, 끗, 피 overflow */}
       <div className={ROW_CLASSES}>
         {gwangCards.length > 0 && <CardStack cards={gwangCards} />}
@@ -54,7 +54,7 @@ export const CapturedArea = ({ captured }: { captured: CapturedCards }) => {
       <div className={ROW_CLASSES}>
         {kkutCards.length > 0 && <CardStack cards={kkutCards} />}
       </div>
-      <div className={`${ROW_CLASSES} justify-end`}>
+      <div className={ROW_CLASSES}>
         {piTopRow.length > 0 && <CardStack cards={piTopRow} />}
       </div>
 
@@ -63,7 +63,7 @@ export const CapturedArea = ({ captured }: { captured: CapturedCards }) => {
       <div className={ROW_CLASSES}>
         {ddiCards.length > 0 && <CardStack cards={ddiCards} />}
       </div>
-      <div className={`${ROW_CLASSES} justify-end gap-1`}>
+      <div className={`${ROW_CLASSES} gap-1`}>
         {piBottomRow.length > 0 && <CardStack cards={piBottomRow} />}
         {piCards.length > 0 && (
           <div className="bg-gray-800 text-white text-xs font-bold rounded px-1.5 py-0.5 min-w-[20px] text-center">
