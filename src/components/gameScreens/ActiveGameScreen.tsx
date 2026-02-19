@@ -112,7 +112,7 @@ export const ActiveGameScreen = ({
         {/* ===== 상단 영역: 상대방 ===== */}
         <div className="flex items-center gap-3 px-3 py-2 bg-black/10 rounded-t-lg shadow-[0_2px_8px_rgba(0,0,0,0.15)]">
           {/* 획득패 슬롯 */}
-          <div className="w-[320px] shrink-0">
+          <div className="w-[420px] shrink-0">
             <CapturedArea captured={opponent.captured} />
           </div>
           {/* 손패 5×2 */}
@@ -155,7 +155,7 @@ export const ActiveGameScreen = ({
         {/* ===== 하단 영역: 나 ===== */}
         <div className="flex items-center gap-3 px-3 py-2 bg-black/10 rounded-b-lg shadow-[0_-2px_8px_rgba(0,0,0,0.15)]">
           {/* 획득패 슬롯 */}
-          <div className="w-[320px] shrink-0">
+          <div className="w-[420px] shrink-0">
             <CapturedArea captured={player.captured} />
           </div>
           {/* 손패 5×2 */}
