@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { AnimatedCard } from './AnimatedCard';
 import type { Card as CardData } from '../../types/card';
@@ -31,16 +30,6 @@ export const HandArea = ({
   const rows = 2;
   const gridHeight = rows * h + (rows - 1) * GAP;
 
-  const allCards = useMemo(
-    () => cards.map((card, idx) => ({
-      card,
-      faceDown: isOpponent,
-      // 상대 더미카드는 모두 같은 name이므로 index 기반 키 사용
-      key: isOpponent ? `opponent-${idx}` : card.name,
-    })),
-    [cards, isOpponent],
-  );
-
   return (
     <div
       style={{
@@ -48,25 +37,28 @@ export const HandArea = ({
         gridTemplateColumns: `repeat(${COLS}, ${w}px)`,
         gridAutoRows: `${h}px`,
         gap: `${GAP}px`,
-        height: `${gridHeight}px`, 
-        transition: 'height 0.3s ease' // 줄어들거나 늘어날 때 부드럽게
+        height: `${gridHeight}px`,
+        transition: 'height 0.3s ease'
       }}
     >
       <AnimatePresence mode="popLayout">
-        {allCards.map(({ card, faceDown, key }) => (
-          <AnimatedCard
-            key={key}
-            card={card}
-            faceDown={faceDown}
-            isDealing={isDealing}
-            dealingDone={dealingDone}
-            animationY={animationY}
-            width={w}  // 숫자 그대로 전달
-            height={h} // 숫자 그대로 전달
-            currentTurn={currentTurn}
-            onCardClick={onCardClick ? () => onCardClick(card.name) : undefined}
-          />
-        ))}
+        {cards.map((card, idx) => {
+          const key = isOpponent ? `opponent-${idx}` : card.name;
+          return (
+            <AnimatedCard
+              key={key}
+              card={card}
+              faceDown={isOpponent}
+              isDealing={isDealing}
+              dealingDone={dealingDone}
+              animationY={animationY}
+              width={w}
+              height={h}
+              currentTurn={currentTurn}
+              onCardClick={onCardClick ? () => onCardClick(card.name) : undefined}
+            />
+          );
+        })}
       </AnimatePresence>
     </div>
   );
