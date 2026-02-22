@@ -64,7 +64,7 @@ export const AnimatedCard = ({
             <Card
             card={card}
             className="w-full h-full"
-            layoutId={`card-${card.name}`}
+            layoutId={`hand-card-${card.name}`}
             onClick={handleClick}
             />
         )}
