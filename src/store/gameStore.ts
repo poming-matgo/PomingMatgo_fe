@@ -94,7 +94,13 @@ export const useGameStore = create<GameStore>((set) => ({
       if (!cardInHand) {
         console.warn(`[submitMyCard] Card not found in hand: ${cardName}`,
           'current hand:', state.player.hand.map(c => c.name));
-        return state;
+        // 카드가 없더라도 새 참조를 반환하여 UI 동기화 보장
+        return {
+          player: {
+            ...state.player,
+            hand: [...state.player.hand],
+          },
+        };
       }
       return {
         player: {
