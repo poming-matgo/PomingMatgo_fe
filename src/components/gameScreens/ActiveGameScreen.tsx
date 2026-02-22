@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LayoutGroup } from 'framer-motion';
 import { useDealingAnimation } from '../../hooks/useDealingAnimation';
 import { HandArea } from '../gameArea/HandArea';
@@ -6,7 +6,7 @@ import { FloorCardsArea } from '../gameArea/FloorCardsArea';
 import { TurnOverlay } from '../gameArea/TurnOverlay';
 import { CapturedArea } from '../CapturedArea';
 import type { Player } from '../../types/game';
-import type { Card as CardData } from '../../types/card';
+import type { Card as CardData, CardName } from '../../types/card';
 
 interface ActiveGameScreenProps {
   player: Player;
@@ -74,9 +74,27 @@ export const ActiveGameScreen = ({
     onDealingComplete,
   });
 
+  // 클릭 즉시 UI에서 카드를 숨기기 위한 낙관적 제거 목록
+  const [pendingSubmits, setPendingSubmits] = useState<Set<CardName>>(new Set());
+
+  // player.hand가 실제로 갱신되면 pending 목록에서 이미 제거된 카드를 정리
+  useEffect(() => {
+    setPendingSubmits((prev) => {
+      const handNames = new Set(player.hand.map(c => c.name));
+      const next = new Set<CardName>();
+      for (const name of prev) {
+        if (handNames.has(name)) next.add(name);
+      }
+      return next.size === prev.size ? prev : next;
+    });
+  }, [player.hand]);
+
   const visiblePlayerHand = useMemo(
-    () => (isDealing && !dealingDone ? player.hand.slice(0, visiblePlayerCards) : player.hand),
-    [isDealing, dealingDone, player.hand, visiblePlayerCards]
+    () => {
+      const hand = isDealing && !dealingDone ? player.hand.slice(0, visiblePlayerCards) : player.hand;
+      return pendingSubmits.size > 0 ? hand.filter(c => !pendingSubmits.has(c.name)) : hand;
+    },
+    [isDealing, dealingDone, player.hand, visiblePlayerCards, pendingSubmits]
   );
 
   const visibleOpponentHand = useMemo(
@@ -89,21 +107,15 @@ export const ActiveGameScreen = ({
     [isDealing, dealingDone, field, visibleFloorCount]
   );
 
-  // 카드 제출 후 턴이 바뀌기 전 중복 클릭 방지
-  const isSubmittingRef = useRef(false);
-
-  useEffect(() => {
-    isSubmittingRef.current = false;
-  }, [currentTurn]);
-
   const handleCardClick = useCallback((cardName: string) => {
-    if (!onCardSubmit || isSubmittingRef.current) return;
+    if (!onCardSubmit) return;
+    if (pendingSubmits.has(cardName as CardName)) return;
     const index = player.hand.findIndex(c => c.name === cardName);
     if (index !== -1) {
-      isSubmittingRef.current = true;
+      setPendingSubmits((prev) => new Set(prev).add(cardName as CardName));
       onCardSubmit(index);
     }
-  }, [onCardSubmit, player.hand]);
+  }, [onCardSubmit, player.hand, pendingSubmits]);
 
   return (
     <LayoutGroup>
