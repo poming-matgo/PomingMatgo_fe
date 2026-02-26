@@ -62,6 +62,7 @@ export const ResponseStatus = {
   CARD_REVEALED: 'CARD_REVEALED',
   ACQUIRED_CARD: 'ACQUIRED_CARD',
   CHOOSE_FLOOR_CARD: 'CHOOSE_FLOOR_CARD',
+  OPPONENT_PI_CLAIMED: 'OPPONENT_PI_CLAIMED',
 } as const;
 
 export type ResponseStatus = typeof ResponseStatus[keyof typeof ResponseStatus];
@@ -146,6 +147,12 @@ export type WebSocketResponseUnion =
       status: typeof ResponseStatus.CHOOSE_FLOOR_CARD;
       message: string;
       data: ChooseFloorCardData;
+    }
+  | {
+      player: Player;
+      status: typeof ResponseStatus.OPPONENT_PI_CLAIMED;
+      message: string;
+      data: string;
     };
 
 // Leader Selection 관련 타입

@@ -31,6 +31,7 @@ interface UseGameWebSocketProps {
   onCardRevealed?: (cardName: string) => void;
   onAcquiredCard?: (player: Player, data: AcquiredCardData) => void;
   onChooseFloorCard?: (player: Player, data: ChooseFloorCardData) => void;
+  onOpponentPiClaimed?: (player: Player, cardName: string) => void;
 }
 
 interface UseGameWebSocketReturn {
@@ -166,6 +167,10 @@ export const useGameWebSocket = (props: UseGameWebSocketProps): UseGameWebSocket
 
           case ResponseStatus.CHOOSE_FLOOR_CARD:
             handlers.onChooseFloorCard?.(response.player, response.data);
+            break;
+
+          case ResponseStatus.OPPONENT_PI_CLAIMED:
+            handlers.onOpponentPiClaimed?.(response.player, response.data);
             break;
 
           default: {

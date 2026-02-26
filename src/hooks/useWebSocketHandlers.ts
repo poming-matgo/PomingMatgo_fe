@@ -96,6 +96,14 @@ export const useWebSocketHandlers = ({
     });
   }, [myPlayer, enqueue]);
 
+  // [플레이] 상대 피 뺏기: 양쪽 captured.PI에서 카드를 찾아 제거 (추가는 ACQUIRED_CARD가 처리)
+  const handleOpponentPiClaimed = useCallback((_msgPlayer: Player, cardName: string) => {
+    enqueue(() => {
+      const { removePi } = useGameStore.getState();
+      removePi(cardName);
+    });
+  }, [enqueue]);
+
   return {
     handleDistributeCard,
     handleDistributedFloorCard,
@@ -104,5 +112,6 @@ export const useWebSocketHandlers = ({
     handleCardRevealed,
     handleAcquiredCard,
     handleChooseFloorCard,
+    handleOpponentPiClaimed,
   };
 };

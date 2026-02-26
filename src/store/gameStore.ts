@@ -9,21 +9,20 @@ interface GameStore extends GameState {
   isGameStarted: boolean;
   roundInfo: AnnounceTurnInformationData | null;
   floorCardChoices: string[] | null;
+  // OPPONENT_PI_CLAIMED이 ACQUIRED_CARD보다 먼저 도착한 경우를 위한 제거 예약
+  pendingPiRemovals: string[];
   loadGameState: (state: GameState) => void;
   setPlayerHand: (cardNames: string[]) => void;
   setOpponentCardCount: (count: number) => void;
   setFloorCards: (floorData: DistributedFloorCardData) => void;
   setRoundInfo: (info: AnnounceTurnInformationData, myPlayerId: string) => void;
   startGame: () => void;
-  // 카드 제출: 내 손패에서 카드를 바닥으로 이동
   submitMyCard: (cardName: string) => void;
-  // 상대 카드 제출: 상대 손패 끝 카드를 바닥으로 이동
   submitOpponentCard: (cardName: string) => void;
-  // 덱에서 카드 공개: 바닥으로 이동
   revealCard: (cardName: string) => void;
-  // 카드 획득: 바닥에서 해당 플레이어로 이동
   acquireCards: (target: 'player' | 'opponent', data: AcquiredCardData) => void;
-  // 바닥 카드 선택지 설정/해제
+  // 피 뺏기: player/opponent 중 카드가 있는 쪽에서 제거 (추가는 ACQUIRED_CARD가 처리)
+  removePi: (cardName: string) => void;
   setFloorCardChoices: (choices: string[] | null) => void;
   reset: () => void;
 }
@@ -42,6 +41,7 @@ export const useGameStore = create<GameStore>((set) => ({
   isGameStarted: false,
   roundInfo: null,
   floorCardChoices: null,
+  pendingPiRemovals: [],
 
   loadGameState: (state: GameState) => {
     set(state);
@@ -94,7 +94,6 @@ export const useGameStore = create<GameStore>((set) => ({
       if (!cardInHand) {
         console.warn(`[submitMyCard] Card not found in hand: ${cardName}`,
           'current hand:', state.player.hand.map(c => c.name));
-        // 카드가 없더라도 새 참조를 반환하여 UI 동기화 보장
         return {
           player: {
             ...state.player,
@@ -140,7 +139,6 @@ export const useGameStore = create<GameStore>((set) => ({
 
   // 카드 획득: 바닥에서 제거 → 해당 플레이어 captured에 추가
   acquireCards: (target: 'player' | 'opponent', data: AcquiredCardData) => {
-    // data 예시: { "KKUT": ["SEP_4"], "PI": ["SEP_3"] }
     const { allCardNames, cardsByType } = convertAcquiredCards(data);
 
     if (allCardNames.length === 0) {
@@ -157,9 +155,24 @@ export const useGameStore = create<GameStore>((set) => ({
       const targetPlayer = state[target];
       const newCaptured = { ...targetPlayer.captured };
 
-      // 각 타입별로 captured에 추가 (타입 안전하게)
+      // 각 타입별로 captured에 추가
       for (const [type, cards] of cardsByType.entries()) {
         newCaptured[type] = [...newCaptured[type], ...cards];
+      }
+
+      // pending 제거 예약이 있으면 방금 추가한 PI에서 즉시 제거
+      const pendingNames = new Set(state.pendingPiRemovals);
+      let remainingPending = state.pendingPiRemovals;
+      if (pendingNames.size > 0) {
+        const before = newCaptured.PI.length;
+        newCaptured.PI = newCaptured.PI.filter(c => !pendingNames.has(c.name));
+        if (newCaptured.PI.length < before) {
+          // 소비된 pending 제거
+          const consumed = new Set(
+            state.pendingPiRemovals.filter(name => !newCaptured.PI.some(c => c.name === name))
+          );
+          remainingPending = state.pendingPiRemovals.filter(name => !consumed.has(name));
+        }
       }
 
       return {
@@ -168,6 +181,44 @@ export const useGameStore = create<GameStore>((set) => ({
           ...targetPlayer,
           captured: newCaptured,
         },
+        pendingPiRemovals: remainingPending,
+      } as Partial<GameStore>;
+    });
+  },
+
+  // 피 뺏기: player/opponent 양쪽에서 카드를 찾아 제거
+  // 서버가 양쪽에 player=자기자신을 보내므로 target을 특정할 수 없어 양쪽 모두 확인
+  removePi: (cardName: string) => {
+    set((state) => {
+      // opponent에서 찾기 (내가 뺏는 쪽인 경우)
+      if (state.opponent.captured.PI.some(c => c.name === cardName)) {
+        return {
+          opponent: {
+            ...state.opponent,
+            captured: {
+              ...state.opponent.captured,
+              PI: state.opponent.captured.PI.filter(c => c.name !== cardName),
+            },
+          },
+        };
+      }
+
+      // player에서 찾기 (내가 뺏기는 쪽인 경우)
+      if (state.player.captured.PI.some(c => c.name === cardName)) {
+        return {
+          player: {
+            ...state.player,
+            captured: {
+              ...state.player.captured,
+              PI: state.player.captured.PI.filter(c => c.name !== cardName),
+            },
+          },
+        };
+      }
+
+      // 양쪽 다 없으면 제거 예약 (ACQUIRED_CARD보다 먼저 도착한 경우)
+      return {
+        pendingPiRemovals: [...state.pendingPiRemovals, cardName],
       };
     });
   },
@@ -177,6 +228,6 @@ export const useGameStore = create<GameStore>((set) => ({
   },
 
   reset: () => {
-    set({ ...createEmptyState(), isGameStarted: false, roundInfo: null, floorCardChoices: null });
+    set({ ...createEmptyState(), isGameStarted: false, roundInfo: null, floorCardChoices: null, pendingPiRemovals: [] });
   },
 }));
