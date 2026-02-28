@@ -67,14 +67,10 @@ export const useGameStore = create<GameStore>((set) => ({
   },
 
   setFloorCards: (floorData: DistributedFloorCardData) => {
-    const fieldCards: Card[] = [];
-    for (const cardNames of Object.values(floorData)) {
-      for (const name of cardNames) {
-        const card = cardNameToCard(name);
-        if (card) fieldCards.push(card);
-      }
-    }
-    set({ field: fieldCards });
+    const field = Object.values(floorData)
+      .flatMap(names => names.map(cardNameToCard))
+      .filter((c): c is Card => c !== null);
+    set({ field });
   },
 
   setRoundInfo: (info: AnnounceTurnInformationData, myPlayerId: string) => {
@@ -95,12 +91,7 @@ export const useGameStore = create<GameStore>((set) => ({
       if (!cardInHand) {
         console.warn(`[submitMyCard] Card not found in hand: ${cardName}`,
           'current hand:', state.player.hand.map(c => c.name));
-        return {
-          player: {
-            ...state.player,
-            hand: [...state.player.hand],
-          },
-        };
+        return {};
       }
       return {
         player: {
@@ -128,14 +119,10 @@ export const useGameStore = create<GameStore>((set) => ({
   // 덱에서 카드 공개 → 바닥에 추가
   revealCard: (cardName: string) => {
     const card = cardNameToCard(cardName);
-    if (!card) {
-      return;
-    }
-    set((state) => {
-      return {
-        field: [...state.field, card],
-      };
-    });
+    if (!card) return;
+    set((state) => ({
+      field: [...state.field, card],
+    }));
   },
 
   // 카드 획득: 바닥에서 제거 → 해당 플레이어 captured에 추가
@@ -147,43 +134,33 @@ export const useGameStore = create<GameStore>((set) => ({
       return;
     }
 
+    const acquiredNameSet = new Set(allCardNames);
+
     set((state) => {
-      // 바닥에서 획득된 카드 제거
-      const newField = state.field.filter(
-        (c) => !allCardNames.includes(c.name)
-      );
+      const newField = state.field.filter((c) => !acquiredNameSet.has(c.name));
 
       const targetPlayer = state[target];
       const newCaptured = { ...targetPlayer.captured };
 
-      // 각 타입별로 captured에 추가
       for (const [type, cards] of cardsByType.entries()) {
         newCaptured[type] = [...newCaptured[type], ...cards];
       }
 
-      // pending 제거 예약이 있으면 방금 추가한 PI에서 즉시 제거
-      const pendingNames = new Set(state.pendingPiRemovals);
-      let remainingPending = state.pendingPiRemovals;
-      if (pendingNames.size > 0) {
-        const before = newCaptured.PI.length;
+      // pending 제거 예약 처리: PI에서 제거 후 소비된 pending 정리
+      let pendingPiRemovals = state.pendingPiRemovals;
+      if (pendingPiRemovals.length > 0) {
+        const pendingNames = new Set(pendingPiRemovals);
+        const removedNames: Set<string> = new Set(newCaptured.PI.filter(c => pendingNames.has(c.name)).map(c => c.name));
         newCaptured.PI = newCaptured.PI.filter(c => !pendingNames.has(c.name));
-        if (newCaptured.PI.length < before) {
-          // 소비된 pending 제거
-          const consumed = new Set(
-            state.pendingPiRemovals.filter(name => !newCaptured.PI.some(c => c.name === name))
-          );
-          remainingPending = state.pendingPiRemovals.filter(name => !consumed.has(name));
-        }
+        pendingPiRemovals = pendingPiRemovals.filter(name => !removedNames.has(name));
       }
 
+      const updatedPlayer = { ...targetPlayer, captured: newCaptured };
       return {
         field: newField,
-        [target]: {
-          ...targetPlayer,
-          captured: newCaptured,
-        },
-        pendingPiRemovals: remainingPending,
-      } as Partial<GameStore>;
+        pendingPiRemovals,
+        ...(target === 'player' ? { player: updatedPlayer } : { opponent: updatedPlayer }),
+      };
     });
   },
 
