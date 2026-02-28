@@ -22,31 +22,35 @@ interface ActiveGameScreenProps {
 
 /** 반투명 검정 라운드 박스 HUD */
 const ScoreHUD = ({
-  label,
+  isOpponent,
   score,
   isTurn,
-  accentColor,
 }: {
-  label: string;
+  isOpponent: boolean;
   score: number;
   isTurn: boolean;
-  accentColor: string;
-}) => (
-  <div className="bg-black/60 backdrop-blur-sm rounded-xl px-4 py-2 flex items-center gap-3 shadow-lg border border-white/10 w-[220px]">
-    <div className={`w-9 h-9 rounded-full ${accentColor} flex items-center justify-center text-white text-xs font-bold shadow-md shrink-0`}>
-      {label}
+}) => {
+  const label = isOpponent ? '상' : '나';
+  const subtitle = isOpponent ? '상대방' : '나';
+  const accentColor = isOpponent ? 'bg-red-600' : 'bg-blue-600';
+
+  return (
+    <div className="bg-black/60 backdrop-blur-sm rounded-xl px-4 py-2 flex items-center gap-3 shadow-lg border border-white/10 w-[220px]">
+      <div className={`w-9 h-9 rounded-full ${accentColor} flex items-center justify-center text-white text-xs font-bold shadow-md shrink-0`}>
+        {label}
+      </div>
+      <div className="flex flex-col">
+        <div className="text-white/70 text-[10px] whitespace-nowrap">{subtitle}</div>
+        <div className="text-yellow-400 font-bold text-xl leading-tight">{score}<span className="text-sm">점</span></div>
+      </div>
+      {isTurn && (
+        <span className="bg-yellow-500 text-black text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse ml-auto">
+          MY TURN
+        </span>
+      )}
     </div>
-    <div className="flex flex-col">
-      <div className="text-white/70 text-[10px] whitespace-nowrap">{label === '나' ? '나' : '상대방'}</div>
-      <div className="text-yellow-400 font-bold text-xl leading-tight">{score}<span className="text-sm">점</span></div>
-    </div>
-    {isTurn && (
-      <span className="bg-yellow-500 text-black text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse ml-auto">
-        MY TURN
-      </span>
-    )}
-  </div>
-);
+  );
+};
 
 export const ActiveGameScreen = ({
   player,
@@ -82,6 +86,7 @@ export const ActiveGameScreen = ({
   // player.hand가 실제로 갱신되면 pending 목록에서 이미 제거된 카드를 정리
   useEffect(() => {
     setPendingSubmits((prev) => {
+      if (prev.size === 0) return prev;
       const handNames = new Set(player.hand.map(c => c.name));
       const next = new Set<CardName>();
       for (const name of prev) {
@@ -150,10 +155,9 @@ export const ActiveGameScreen = ({
           {/* Scoreboard HUD */}
           <div className="shrink-0">
             <ScoreHUD
-              label="상"
+              isOpponent
               score={opponent.score}
               isTurn={currentTurn === 'opponent'}
-              accentColor="bg-red-600"
             />
           </div>
         </div>
@@ -194,10 +198,9 @@ export const ActiveGameScreen = ({
           {/* Scoreboard HUD */}
           <div className="shrink-0">
             <ScoreHUD
-              label="나"
+              isOpponent={false}
               score={player.score}
               isTurn={currentTurn === 'player'}
-              accentColor="bg-blue-600"
             />
           </div>
         </div>
