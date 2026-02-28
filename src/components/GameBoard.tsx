@@ -76,6 +76,7 @@ export const GameBoard = () => {
     handleAcquiredCard,
     handleChooseFloorCard,
     handleOpponentPiClaimed,
+    handleScoreUpdate,
   } = useWebSocketHandlers({
     myPlayer,
     phaseRef,
@@ -110,6 +111,7 @@ export const GameBoard = () => {
     onAcquiredCard: handleAcquiredCard,
     onChooseFloorCard: handleChooseFloorCard,
     onOpponentPiClaimed: handleOpponentPiClaimed,
+    onScoreUpdate: handleScoreUpdate,
   });
 
   const handleFloorCardSelect = useCallback((cardIndex: number) => {

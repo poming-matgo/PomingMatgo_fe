@@ -14,6 +14,7 @@ import {
   type AnnounceTurnInformationData,
   type AcquiredCardData,
   type ChooseFloorCardData,
+  type ScoreUpdateData,
 } from '../types/websocket';
 
 interface UseGameWebSocketProps {
@@ -32,6 +33,7 @@ interface UseGameWebSocketProps {
   onAcquiredCard?: (player: Player, data: AcquiredCardData) => void;
   onChooseFloorCard?: (player: Player, data: ChooseFloorCardData) => void;
   onOpponentPiClaimed?: (player: Player, cardName: string) => void;
+  onScoreUpdate?: (data: ScoreUpdateData) => void;
 }
 
 interface UseGameWebSocketReturn {
@@ -171,6 +173,10 @@ export const useGameWebSocket = (props: UseGameWebSocketProps): UseGameWebSocket
 
           case ResponseStatus.OPPONENT_PI_CLAIMED:
             handlers.onOpponentPiClaimed?.(response.player, response.data);
+            break;
+
+          case ResponseStatus.SCORE_UPDATE:
+            handlers.onScoreUpdate?.(response.data);
             break;
 
           default: {

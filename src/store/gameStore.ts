@@ -23,6 +23,7 @@ interface GameStore extends GameState {
   acquireCards: (target: 'player' | 'opponent', data: AcquiredCardData) => void;
   // 피 뺏기: player/opponent 중 카드가 있는 쪽에서 제거 (추가는 ACQUIRED_CARD가 처리)
   removePi: (cardName: string) => void;
+  updateScores: (myScore: number, opponentScore: number) => void;
   setFloorCardChoices: (choices: string[] | null) => void;
   reset: () => void;
 }
@@ -221,6 +222,13 @@ export const useGameStore = create<GameStore>((set) => ({
         pendingPiRemovals: [...state.pendingPiRemovals, cardName],
       };
     });
+  },
+
+  updateScores: (myScore: number, opponentScore: number) => {
+    set((state) => ({
+      player: { ...state.player, score: myScore },
+      opponent: { ...state.opponent, score: opponentScore },
+    }));
   },
 
   setFloorCardChoices: (choices: string[] | null) => {

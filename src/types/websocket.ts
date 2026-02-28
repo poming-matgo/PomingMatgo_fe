@@ -63,6 +63,7 @@ export const ResponseStatus = {
   ACQUIRED_CARD: 'ACQUIRED_CARD',
   CHOOSE_FLOOR_CARD: 'CHOOSE_FLOOR_CARD',
   OPPONENT_PI_CLAIMED: 'OPPONENT_PI_CLAIMED',
+  SCORE_UPDATE: 'SCORE_UPDATE',
 } as const;
 
 export type ResponseStatus = typeof ResponseStatus[keyof typeof ResponseStatus];
@@ -153,6 +154,12 @@ export type WebSocketResponseUnion =
       status: typeof ResponseStatus.OPPONENT_PI_CLAIMED;
       message: string;
       data: string;
+    }
+  | {
+      player: Player;
+      status: typeof ResponseStatus.SCORE_UPDATE;
+      message: string;
+      data: ScoreUpdateData;
     };
 
 // Leader Selection 관련 타입
@@ -197,6 +204,16 @@ export interface NormalSubmitData {
 
 // ACQUIRED_CARD의 data: { "KKUT": ["SEP_4"], "PI": ["SEP_3"] }
 export type AcquiredCardData = Record<string, string[]>;
+
+// SCORE_UPDATE의 data
+export interface PlayerScore {
+  playerNumber: number;
+  score: number;
+}
+
+export interface ScoreUpdateData {
+  scores: PlayerScore[];
+}
 
 // Legacy - 기존 호환용
 export interface RequestEvent<T = unknown> {

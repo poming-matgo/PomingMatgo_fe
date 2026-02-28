@@ -8,6 +8,7 @@ import type {
   AnnounceTurnInformationData,
   AcquiredCardData,
   ChooseFloorCardData,
+  ScoreUpdateData,
 } from '../types/websocket';
 
 const Target = {
@@ -96,6 +97,15 @@ export const useWebSocketHandlers = ({
     });
   }, [myPlayer, enqueue]);
 
+  // [플레이] 점수 업데이트
+  const handleScoreUpdate = useCallback((data: ScoreUpdateData) => {
+    const { updateScores } = useGameStore.getState();
+    const myNumber = myPlayer === 'PLAYER_1' ? 1 : 2;
+    const myScoreEntry = data.scores.find(s => s.playerNumber === myNumber);
+    const opponentScoreEntry = data.scores.find(s => s.playerNumber !== myNumber);
+    updateScores(myScoreEntry?.score ?? 0, opponentScoreEntry?.score ?? 0);
+  }, [myPlayer]);
+
   // [플레이] 상대 피 뺏기: 양쪽 captured.PI에서 카드를 찾아 제거 (추가는 ACQUIRED_CARD가 처리)
   const handleOpponentPiClaimed = useCallback((_msgPlayer: Player, cardName: string) => {
     enqueue(() => {
@@ -113,5 +123,6 @@ export const useWebSocketHandlers = ({
     handleAcquiredCard,
     handleChooseFloorCard,
     handleOpponentPiClaimed,
+    handleScoreUpdate,
   };
 };
