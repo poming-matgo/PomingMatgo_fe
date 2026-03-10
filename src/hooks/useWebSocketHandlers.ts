@@ -20,7 +20,7 @@ interface UseWebSocketHandlersProps {
   myPlayer: Player;
   phaseRef: RefObject<GamePhase>;
   addSetupCondition: (condition: string) => void;
-  enqueue: (fn: () => void, options?: { interactive?: boolean }) => void;
+  enqueue: (fn: () => void, options?: { interactive?: boolean; immediate?: boolean }) => void;
 }
 
 export const useWebSocketHandlers = ({
@@ -97,14 +97,24 @@ export const useWebSocketHandlers = ({
     });
   }, [myPlayer, enqueue]);
 
-  // [플레이] 점수 업데이트
+  // [플레이] 점수 업데이트 (이전 애니메이션 완료 직후 즉시 반영)
   const handleScoreUpdate = useCallback((data: ScoreUpdateData) => {
-    const { updateScores } = useGameStore.getState();
-    const myNumber = myPlayer === 'PLAYER_1' ? 1 : 2;
-    const myScoreEntry = data.scores.find(s => s.playerNumber === myNumber);
-    const opponentScoreEntry = data.scores.find(s => s.playerNumber !== myNumber);
-    updateScores(myScoreEntry?.score ?? 0, opponentScoreEntry?.score ?? 0);
-  }, [myPlayer]);
+    enqueue(() => {
+      const { updateScores } = useGameStore.getState();
+      const myNumber = myPlayer === 'PLAYER_1' ? 1 : 2;
+      const myScoreEntry = data.scores.find(s => s.playerNumber === myNumber);
+      const opponentScoreEntry = data.scores.find(s => s.playerNumber !== myNumber);
+      updateScores(myScoreEntry?.score ?? 0, opponentScoreEntry?.score ?? 0);
+    }, { immediate: true });
+  }, [myPlayer, enqueue]);
+
+  // [플레이] 고/스톱 선택 요청 (유저 인터랙션 대기)
+  const handleGoStopChoice = useCallback(() => {
+    const { setShowGoStopChoice } = useGameStore.getState();
+    enqueue(() => {
+      setShowGoStopChoice(true);
+    }, { interactive: true });
+  }, [enqueue]);
 
   // [플레이] 상대 피 뺏기: 양쪽 captured.PI에서 카드를 찾아 제거 (추가는 ACQUIRED_CARD가 처리)
   const handleOpponentPiClaimed = useCallback((_msgPlayer: Player, cardName: string) => {
@@ -122,6 +132,7 @@ export const useWebSocketHandlers = ({
     handleCardRevealed,
     handleAcquiredCard,
     handleChooseFloorCard,
+    handleGoStopChoice,
     handleOpponentPiClaimed,
     handleScoreUpdate,
   };

@@ -34,6 +34,7 @@ interface UseGameWebSocketProps {
   onChooseFloorCard?: (player: Player, data: ChooseFloorCardData) => void;
   onOpponentPiClaimed?: (player: Player, cardName: string) => void;
   onScoreUpdate?: (data: ScoreUpdateData) => void;
+  onGoStopChoice?: (player: Player) => void;
 }
 
 interface UseGameWebSocketReturn {
@@ -44,6 +45,7 @@ interface UseGameWebSocketReturn {
   sendLeaderSelection: (cardIndex: number) => void;
   sendNormalSubmit: (cardIndex: number) => void;
   sendFloorSelect: (cardIndex: number) => void;
+  sendGoStopChoice: (go: boolean) => void;
 }
 
 export const useGameWebSocket = (props: UseGameWebSocketProps): UseGameWebSocketReturn => {
@@ -98,6 +100,13 @@ export const useGameWebSocket = (props: UseGameWebSocketProps): UseGameWebSocket
     });
   }, [send]);
 
+  const sendGoStopChoice = useCallback((go: boolean) => {
+    send({
+      eventType: { type: EventMainType.GAME, subType: EventSubType.GO_STOP_CHOICE },
+      data: { go },
+    });
+  }, [send]);
+
   useEffect(() => {
     const ws = new WebSocket(DEV_CONFIG.WS_URL);
     wsRef.current = ws;
@@ -114,6 +123,7 @@ export const useGameWebSocket = (props: UseGameWebSocketProps): UseGameWebSocket
     ws.onmessage = (event) => {
       try {
         const response: WebSocketResponseUnion = JSON.parse(event.data);
+        console.log('[WS Response]', response.status, response);
         const handlers = callbacksRef.current;
 
         switch (response.status) {
@@ -179,6 +189,10 @@ export const useGameWebSocket = (props: UseGameWebSocketProps): UseGameWebSocket
             handlers.onScoreUpdate?.(response.data);
             break;
 
+          case ResponseStatus.GO_STOP_CHOICE:
+            handlers.onGoStopChoice?.(response.player);
+            break;
+
           default: {
             const _exhaustiveCheck: never = response;
             console.warn('Unknown message status:', _exhaustiveCheck);
@@ -205,5 +219,6 @@ export const useGameWebSocket = (props: UseGameWebSocketProps): UseGameWebSocket
     sendLeaderSelection,
     sendNormalSubmit,
     sendFloorSelect,
+    sendGoStopChoice,
   };
 };

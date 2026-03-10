@@ -28,6 +28,7 @@ export const EventSubType = {
   LEADER_SELECTION: 'LEADER_SELECTION',
   NORMAL_SUBMIT: 'NORMAL_SUBMIT',
   FLOOR_SELECT: 'FLOOR_SELECT',
+  GO_STOP_CHOICE: 'GO_STOP_CHOICE',
 } as const;
 
 export type EventSubType = typeof EventSubType[keyof typeof EventSubType];
@@ -64,6 +65,7 @@ export const ResponseStatus = {
   CHOOSE_FLOOR_CARD: 'CHOOSE_FLOOR_CARD',
   OPPONENT_PI_CLAIMED: 'OPPONENT_PI_CLAIMED',
   SCORE_UPDATE: 'SCORE_UPDATE',
+  GO_STOP_CHOICE: 'GO_STOP_CHOICE',
 } as const;
 
 export type ResponseStatus = typeof ResponseStatus[keyof typeof ResponseStatus];
@@ -160,6 +162,12 @@ export type WebSocketResponseUnion =
       status: typeof ResponseStatus.SCORE_UPDATE;
       message: string;
       data: ScoreUpdateData;
+    }
+  | {
+      player: Player;
+      status: typeof ResponseStatus.GO_STOP_CHOICE;
+      message: string;
+      data: null;
     };
 
 // Leader Selection 관련 타입
@@ -213,6 +221,11 @@ export interface PlayerScore {
 
 export interface ScoreUpdateData {
   scores: PlayerScore[];
+}
+
+// 고/스톱 선택 관련 타입
+export interface GoStopChoiceData {
+  go: boolean;
 }
 
 // Legacy - 기존 호환용

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { LayoutGroup } from 'framer-motion';
+import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import { useDealingAnimation } from '../../hooks/useDealingAnimation';
 import { HandArea } from '../gameArea/HandArea';
 import { FloorCardsArea } from '../gameArea/FloorCardsArea';
@@ -18,6 +18,8 @@ interface ActiveGameScreenProps {
   onDealingComplete?: () => void;
   floorCardChoices?: string[] | null;
   onFloorCardSelect?: (cardIndex: number) => void;
+  showGoStopChoice?: boolean;
+  onGoStopSelect?: (go: boolean) => void;
 }
 
 /** 반투명 검정 라운드 박스 HUD */
@@ -62,6 +64,8 @@ export const ActiveGameScreen = ({
   onDealingComplete,
   floorCardChoices,
   onFloorCardSelect,
+  showGoStopChoice,
+  onGoStopSelect,
 }: ActiveGameScreenProps) => {
   const {
     phase,
@@ -204,6 +208,43 @@ export const ActiveGameScreen = ({
             />
           </div>
         </div>
+
+        {/* 고/스톱 선택 모달 */}
+        <AnimatePresence>
+          {showGoStopChoice && (
+            <motion.div
+              className="absolute inset-0 z-50 flex items-center justify-center bg-black/50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <motion.div
+                className="bg-black/80 backdrop-blur-sm rounded-2xl p-8 flex flex-col items-center gap-6 border border-white/20 shadow-2xl"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+              >
+                <h2 className="text-white text-2xl font-bold">고 / 스톱</h2>
+                <p className="text-white/70 text-sm">계속 진행하시겠습니까?</p>
+                <div className="flex gap-6">
+                  <button
+                    onClick={() => onGoStopSelect?.(true)}
+                    className="px-10 py-4 bg-red-600 hover:bg-red-500 text-white text-xl font-bold rounded-xl transition-colors shadow-lg hover:shadow-red-500/30 active:scale-95"
+                  >
+                    고
+                  </button>
+                  <button
+                    onClick={() => onGoStopSelect?.(false)}
+                    className="px-10 py-4 bg-blue-600 hover:bg-blue-500 text-white text-xl font-bold rounded-xl transition-colors shadow-lg hover:shadow-blue-500/30 active:scale-95"
+                  >
+                    스톱
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* 턴 안내 오버레이 */}
         <TurnOverlay phase={phase} currentTurn={currentTurn} />

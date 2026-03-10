@@ -41,6 +41,7 @@ export const GameBoard = () => {
   const field = useGameStore(state => state.field);
   const currentTurn = useGameStore(state => state.currentTurn);
   const floorCardChoices = useGameStore(state => state.floorCardChoices);
+  const showGoStopChoice = useGameStore(state => state.showGoStopChoice);
   const reset = useGameStore(state => state.reset);
 
   const { enqueue, resume } = useAnimationQueue(800);
@@ -75,6 +76,7 @@ export const GameBoard = () => {
     handleCardRevealed,
     handleAcquiredCard,
     handleChooseFloorCard,
+    handleGoStopChoice,
     handleOpponentPiClaimed,
     handleScoreUpdate,
   } = useWebSocketHandlers({
@@ -95,7 +97,7 @@ export const GameBoard = () => {
   }, [setPhase]);
 
   // --- 6. WebSocket Connection ---
-  const { isConnected, connectedPlayers, sendReady, sendLeaderSelection, sendNormalSubmit, sendFloorSelect } = useGameWebSocket({
+  const { isConnected, connectedPlayers, sendReady, sendLeaderSelection, sendNormalSubmit, sendFloorSelect, sendGoStopChoice } = useGameWebSocket({
     userId,
     roomId,
     onOpponentConnect: handleOpponentConnect,
@@ -112,7 +114,14 @@ export const GameBoard = () => {
     onChooseFloorCard: handleChooseFloorCard,
     onOpponentPiClaimed: handleOpponentPiClaimed,
     onScoreUpdate: handleScoreUpdate,
+    onGoStopChoice: handleGoStopChoice,
   });
+
+  const handleGoStopSelect = useCallback((go: boolean) => {
+    sendGoStopChoice(go);
+    useGameStore.getState().setShowGoStopChoice(false);
+    resume();
+  }, [sendGoStopChoice, resume]);
 
   const handleFloorCardSelect = useCallback((cardIndex: number) => {
     sendFloorSelect(cardIndex);
@@ -167,6 +176,8 @@ export const GameBoard = () => {
           onDealingComplete={handleDealingComplete}
           floorCardChoices={floorCardChoices}
           onFloorCardSelect={handleFloorCardSelect}
+          showGoStopChoice={showGoStopChoice}
+          onGoStopSelect={handleGoStopSelect}
         />
       )}
     </div>
