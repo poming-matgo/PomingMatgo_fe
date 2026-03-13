@@ -41,7 +41,7 @@ export const GameBoard = () => {
   const field = useGameStore(state => state.field);
   const currentTurn = useGameStore(state => state.currentTurn);
   const floorCardChoices = useGameStore(state => state.floorCardChoices);
-  const showGoStopChoice = useGameStore(state => state.showGoStopChoice);
+  const goStopChoiceCount = useGameStore(state => state.goStopChoiceCount);
   const reset = useGameStore(state => state.reset);
 
   const { enqueue, resume } = useAnimationQueue(800);
@@ -119,7 +119,7 @@ export const GameBoard = () => {
 
   const handleGoStopSelect = useCallback((go: boolean) => {
     sendGoStopChoice(go);
-    useGameStore.getState().setShowGoStopChoice(false);
+    useGameStore.getState().setGoStopChoiceCount(null);
     resume();
   }, [sendGoStopChoice, resume]);
 
@@ -176,7 +176,7 @@ export const GameBoard = () => {
           onDealingComplete={handleDealingComplete}
           floorCardChoices={floorCardChoices}
           onFloorCardSelect={handleFloorCardSelect}
-          showGoStopChoice={showGoStopChoice}
+          goStopChoiceCount={goStopChoiceCount}
           onGoStopSelect={handleGoStopSelect}
         />
       )}

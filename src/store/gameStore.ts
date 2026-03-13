@@ -9,7 +9,7 @@ interface GameStore extends GameState {
   isGameStarted: boolean;
   roundInfo: AnnounceTurnInformationData | null;
   floorCardChoices: string[] | null;
-  showGoStopChoice: boolean;
+  goStopChoiceCount: number | null;
   // OPPONENT_PI_CLAIMED이 ACQUIRED_CARD보다 먼저 도착한 경우를 위한 제거 예약
   pendingPiRemovals: string[];
   loadGameState: (state: GameState) => void;
@@ -26,7 +26,7 @@ interface GameStore extends GameState {
   removePi: (cardName: string) => void;
   updateScores: (myScore: number, opponentScore: number) => void;
   setFloorCardChoices: (choices: string[] | null) => void;
-  setShowGoStopChoice: (show: boolean) => void;
+  setGoStopChoiceCount: (count: number | null) => void;
   reset: () => void;
 }
 
@@ -44,7 +44,7 @@ export const useGameStore = create<GameStore>((set) => ({
   isGameStarted: false,
   roundInfo: null,
   floorCardChoices: null,
-  showGoStopChoice: false,
+  goStopChoiceCount: null,
   pendingPiRemovals: [],
 
   loadGameState: (state: GameState) => {
@@ -215,11 +215,11 @@ export const useGameStore = create<GameStore>((set) => ({
     set({ floorCardChoices: choices });
   },
 
-  setShowGoStopChoice: (show: boolean) => {
-    set({ showGoStopChoice: show });
+  setGoStopChoiceCount: (count: number | null) => {
+    set({ goStopChoiceCount: count });
   },
 
   reset: () => {
-    set({ ...createEmptyState(), isGameStarted: false, roundInfo: null, floorCardChoices: null, showGoStopChoice: false, pendingPiRemovals: [] });
+    set({ ...createEmptyState(), isGameStarted: false, roundInfo: null, floorCardChoices: null, goStopChoiceCount: null, pendingPiRemovals: [] });
   },
 }));

@@ -18,7 +18,7 @@ interface ActiveGameScreenProps {
   onDealingComplete?: () => void;
   floorCardChoices?: string[] | null;
   onFloorCardSelect?: (cardIndex: number) => void;
-  showGoStopChoice?: boolean;
+  goStopChoiceCount?: number | null;
   onGoStopSelect?: (go: boolean) => void;
 }
 
@@ -64,7 +64,7 @@ export const ActiveGameScreen = ({
   onDealingComplete,
   floorCardChoices,
   onFloorCardSelect,
-  showGoStopChoice,
+  goStopChoiceCount,
   onGoStopSelect,
 }: ActiveGameScreenProps) => {
   const {
@@ -211,7 +211,7 @@ export const ActiveGameScreen = ({
 
         {/* 고/스톱 선택 모달 */}
         <AnimatePresence>
-          {showGoStopChoice && (
+          {goStopChoiceCount != null && (
             <motion.div
               className="absolute inset-0 z-50 flex items-center justify-center bg-black/50"
               initial={{ opacity: 0 }}
@@ -232,7 +232,7 @@ export const ActiveGameScreen = ({
                     onClick={() => onGoStopSelect?.(true)}
                     className="px-10 py-4 bg-red-600 hover:bg-red-500 text-white text-xl font-bold rounded-xl transition-colors shadow-lg hover:shadow-red-500/30 active:scale-95"
                   >
-                    고
+                    {goStopChoiceCount}고
                   </button>
                   <button
                     onClick={() => onGoStopSelect?.(false)}

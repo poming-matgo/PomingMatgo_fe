@@ -34,7 +34,7 @@ interface UseGameWebSocketProps {
   onChooseFloorCard?: (player: Player, data: ChooseFloorCardData) => void;
   onOpponentPiClaimed?: (player: Player, cardName: string) => void;
   onScoreUpdate?: (data: ScoreUpdateData) => void;
-  onGoStopChoice?: (player: Player) => void;
+  onGoStopChoice?: (player: Player, goCount: number) => void;
 }
 
 interface UseGameWebSocketReturn {
@@ -190,7 +190,7 @@ export const useGameWebSocket = (props: UseGameWebSocketProps): UseGameWebSocket
             break;
 
           case ResponseStatus.GO_STOP_CHOICE:
-            handlers.onGoStopChoice?.(response.player);
+            handlers.onGoStopChoice?.(response.player, response.data);
             break;
 
           default: {

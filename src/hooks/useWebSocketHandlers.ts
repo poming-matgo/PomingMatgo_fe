@@ -109,10 +109,10 @@ export const useWebSocketHandlers = ({
   }, [myPlayer, enqueue]);
 
   // [플레이] 고/스톱 선택 요청 (유저 인터랙션 대기)
-  const handleGoStopChoice = useCallback(() => {
-    const { setShowGoStopChoice } = useGameStore.getState();
+  const handleGoStopChoice = useCallback((_msgPlayer: Player, goCount: number) => {
+    const { setGoStopChoiceCount } = useGameStore.getState();
     enqueue(() => {
-      setShowGoStopChoice(true);
+      setGoStopChoiceCount(goCount);
     }, { interactive: true });
   }, [enqueue]);
 

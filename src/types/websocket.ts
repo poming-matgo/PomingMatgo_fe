@@ -167,7 +167,7 @@ export type WebSocketResponseUnion =
       player: Player;
       status: typeof ResponseStatus.GO_STOP_CHOICE;
       message: string;
-      data: null;
+      data: number;
     };
 
 // Leader Selection 관련 타입
