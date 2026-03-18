@@ -35,13 +35,22 @@ export const useAnimationQueue = (delay: number = 800) => {
 
     isProcessingRef.current = true;
     const item = queue[0];
-    item.action();
+
+    try {
+      item.action();
+    } catch (e) {
+      console.error('[AnimQ] action threw!', e);
+    }
 
     // 뒤따르는 immediate 아이템을 현재 아이템과 동시에 실행
     let extraConsumed = 0;
     for (let i = 1; i < queue.length; i++) {
       if (!queue[i].immediate) break;
-      queue[i].action();
+      try {
+        queue[i].action();
+      } catch (e) {
+        console.error('[AnimQ] immediate action threw!', e);
+      }
       extraConsumed++;
     }
     const totalConsumed = 1 + extraConsumed;

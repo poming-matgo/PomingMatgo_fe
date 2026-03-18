@@ -66,6 +66,8 @@ export const ResponseStatus = {
   OPPONENT_PI_CLAIMED: 'OPPONENT_PI_CLAIMED',
   SCORE_UPDATE: 'SCORE_UPDATE',
   GO_STOP_CHOICE: 'GO_STOP_CHOICE',
+  OPPONENT_GO_STOP_CHOICE: 'OPPONENT_GO_STOP_CHOICE',
+  GO_RESULT: 'GO_RESULT',
 } as const;
 
 export type ResponseStatus = typeof ResponseStatus[keyof typeof ResponseStatus];
@@ -168,6 +170,18 @@ export type WebSocketResponseUnion =
       status: typeof ResponseStatus.GO_STOP_CHOICE;
       message: string;
       data: number;
+    }
+  | {
+      player: Player;
+      status: typeof ResponseStatus.OPPONENT_GO_STOP_CHOICE;
+      message: string;
+      data: null;
+    }
+  | {
+      player: Player;
+      status: typeof ResponseStatus.GO_RESULT;
+      message: string;
+      data: string;
     };
 
 // Leader Selection 관련 타입

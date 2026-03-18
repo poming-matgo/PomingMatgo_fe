@@ -10,6 +10,11 @@ interface GameStore extends GameState {
   roundInfo: AnnounceTurnInformationData | null;
   floorCardChoices: string[] | null;
   goStopChoiceCount: number | null;
+  opponentGoStopWaiting: boolean; // 상대가 고/스톱 선택중
+  goResultBanner: string | null; // "1고" 같은 배너 텍스트
+  playerGoCount: number;
+  opponentGoCount: number;
+  turnKey: number; // setRoundInfo 호출 시마다 증가 (같은 플레이어 턴 반복 감지용)
   // OPPONENT_PI_CLAIMED이 ACQUIRED_CARD보다 먼저 도착한 경우를 위한 제거 예약
   pendingPiRemovals: string[];
   loadGameState: (state: GameState) => void;
@@ -27,6 +32,9 @@ interface GameStore extends GameState {
   updateScores: (myScore: number, opponentScore: number) => void;
   setFloorCardChoices: (choices: string[] | null) => void;
   setGoStopChoiceCount: (count: number | null) => void;
+  setOpponentGoStopWaiting: (waiting: boolean) => void;
+  setGoResult: (target: 'player' | 'opponent', goCount: number) => void;
+  clearGoResultBanner: () => void;
   reset: () => void;
 }
 
@@ -45,6 +53,11 @@ export const useGameStore = create<GameStore>((set) => ({
   roundInfo: null,
   floorCardChoices: null,
   goStopChoiceCount: null,
+  opponentGoStopWaiting: false,
+  goResultBanner: null,
+  playerGoCount: 0,
+  opponentGoCount: 0,
+  turnKey: 0,
   pendingPiRemovals: [],
 
   loadGameState: (state: GameState) => {
@@ -77,10 +90,12 @@ export const useGameStore = create<GameStore>((set) => ({
   },
 
   setRoundInfo: (info: AnnounceTurnInformationData, myPlayerId: string) => {
-    set({
+    const newTurn = info.curPlayer === myPlayerId ? 'player' : 'opponent';
+    set((state) => ({
       roundInfo: info,
-      currentTurn: info.curPlayer === myPlayerId ? 'player' : 'opponent',
-    });
+      currentTurn: newTurn,
+      turnKey: state.turnKey + 1,
+    }));
   },
 
   startGame: () => {
@@ -219,7 +234,23 @@ export const useGameStore = create<GameStore>((set) => ({
     set({ goStopChoiceCount: count });
   },
 
+  setOpponentGoStopWaiting: (waiting: boolean) => {
+    set({ opponentGoStopWaiting: waiting });
+  },
+
+  setGoResult: (target: 'player' | 'opponent', goCount: number) => {
+    const goCountKey = target === 'player' ? 'playerGoCount' : 'opponentGoCount';
+    set({
+      goResultBanner: `${goCount}고`,
+      [goCountKey]: goCount,
+    });
+  },
+
+  clearGoResultBanner: () => {
+    set({ goResultBanner: null });
+  },
+
   reset: () => {
-    set({ ...createEmptyState(), isGameStarted: false, roundInfo: null, floorCardChoices: null, goStopChoiceCount: null, pendingPiRemovals: [] });
+    set({ ...createEmptyState(), isGameStarted: false, roundInfo: null, floorCardChoices: null, goStopChoiceCount: null, opponentGoStopWaiting: false, goResultBanner: null, playerGoCount: 0, opponentGoCount: 0, turnKey: 0, pendingPiRemovals: [] });
   },
 }));

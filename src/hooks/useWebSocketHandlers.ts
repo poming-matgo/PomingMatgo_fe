@@ -116,6 +116,25 @@ export const useWebSocketHandlers = ({
     }, { interactive: true });
   }, [enqueue]);
 
+  // [플레이] 상대방이 고/스톱 선택중 (대기 표시, 큐는 멈추지 않음)
+  const handleOpponentGoStopChoice = useCallback(() => {
+    const { setOpponentGoStopWaiting } = useGameStore.getState();
+    enqueue(() => {
+      setOpponentGoStopWaiting(true);
+    });
+  }, [enqueue]);
+
+  // [플레이] 고/스톱 결과 (1초간 배너 표시 + 고 횟수 갱신 + 대기 해제)
+  const handleGoResult = useCallback((msgPlayer: Player, goCount: string) => {
+    const target = msgPlayer === myPlayer ? Target.PLAYER : Target.OPPONENT;
+    enqueue(() => {
+      const { setGoResult, clearGoResultBanner, setOpponentGoStopWaiting } = useGameStore.getState();
+      setOpponentGoStopWaiting(false);
+      setGoResult(target, Number(goCount));
+      setTimeout(() => clearGoResultBanner(), 1000);
+    });
+  }, [myPlayer, enqueue]);
+
   // [플레이] 상대 피 뺏기: 양쪽 captured.PI에서 카드를 찾아 제거 (추가는 ACQUIRED_CARD가 처리)
   const handleOpponentPiClaimed = useCallback((_msgPlayer: Player, cardName: string) => {
     enqueue(() => {
@@ -133,6 +152,8 @@ export const useWebSocketHandlers = ({
     handleAcquiredCard,
     handleChooseFloorCard,
     handleGoStopChoice,
+    handleOpponentGoStopChoice,
+    handleGoResult,
     handleOpponentPiClaimed,
     handleScoreUpdate,
   };

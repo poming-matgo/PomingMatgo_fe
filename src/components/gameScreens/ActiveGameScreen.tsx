@@ -13,6 +13,7 @@ interface ActiveGameScreenProps {
   opponent: Player;
   field: CardData[];
   currentTurn: 'player' | 'opponent';
+  turnKey?: number;
   isDealing?: boolean;
   onCardSubmit?: (cardIndex: number) => void;
   onDealingComplete?: () => void;
@@ -20,6 +21,10 @@ interface ActiveGameScreenProps {
   onFloorCardSelect?: (cardIndex: number) => void;
   goStopChoiceCount?: number | null;
   onGoStopSelect?: (go: boolean) => void;
+  opponentGoStopWaiting?: boolean;
+  goResultBanner?: string | null;
+  playerGoCount?: number;
+  opponentGoCount?: number;
 }
 
 /** 반투명 검정 라운드 박스 HUD */
@@ -27,10 +32,12 @@ const ScoreHUD = ({
   isOpponent,
   score,
   isTurn,
+  goCount,
 }: {
   isOpponent: boolean;
   score: number;
   isTurn: boolean;
+  goCount: number;
 }) => {
   const label = isOpponent ? '상' : '나';
   const subtitle = isOpponent ? '상대방' : '나';
@@ -45,11 +52,18 @@ const ScoreHUD = ({
         <div className="text-white/70 text-[10px] whitespace-nowrap">{subtitle}</div>
         <div className="text-yellow-400 font-bold text-xl leading-tight">{score}<span className="text-sm">점</span></div>
       </div>
-      {isTurn && (
-        <span className="bg-yellow-500 text-black text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse ml-auto">
-          MY TURN
-        </span>
-      )}
+      <div className="flex flex-col items-end ml-auto gap-1">
+        {goCount > 0 && (
+          <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+            {goCount}고
+          </span>
+        )}
+        {isTurn && (
+          <span className="bg-yellow-500 text-black text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">
+            MY TURN
+          </span>
+        )}
+      </div>
     </div>
   );
 };
@@ -66,6 +80,11 @@ export const ActiveGameScreen = ({
   onFloorCardSelect,
   goStopChoiceCount,
   onGoStopSelect,
+  turnKey,
+  opponentGoStopWaiting = false,
+  goResultBanner,
+  playerGoCount = 0,
+  opponentGoCount = 0,
 }: ActiveGameScreenProps) => {
   const {
     phase,
@@ -100,10 +119,10 @@ export const ActiveGameScreen = ({
     });
   }, [player.hand]);
 
-  // 턴이 바뀌면 제출 잠금 해제
+  // 새 턴이 시작되면 제출 잠금 해제 (같은 플레이어에게 턴이 돌아오는 경우도 포함)
   useEffect(() => {
     submittedRef.current = false;
-  }, [currentTurn]);
+  }, [currentTurn, turnKey]);
 
   const visiblePlayerHand = useMemo(
     () => {
@@ -162,6 +181,7 @@ export const ActiveGameScreen = ({
               isOpponent
               score={opponent.score}
               isTurn={currentTurn === 'opponent'}
+              goCount={opponentGoCount}
             />
           </div>
         </div>
@@ -205,9 +225,45 @@ export const ActiveGameScreen = ({
               isOpponent={false}
               score={player.score}
               isTurn={currentTurn === 'player'}
+              goCount={playerGoCount}
             />
           </div>
         </div>
+
+        {/* 상대방 고/스톱 선택중 오버레이 */}
+        <AnimatePresence>
+          {opponentGoStopWaiting && (
+            <motion.div
+              className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <div className="bg-black/70 backdrop-blur-sm rounded-xl px-8 py-4">
+                <span className="text-white text-lg font-bold animate-pulse">
+                  상대방이 고/스톱 선택중입니다...
+                </span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* 고 결과 배너 (1초간 표시) */}
+        <AnimatePresence>
+          {goResultBanner && (
+            <motion.div
+              className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none"
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.5 }}
+              transition={{ duration: 0.3 }}
+            >
+              <span className="text-red-500 text-6xl font-black drop-shadow-[0_0_20px_rgba(239,68,68,0.7)]">
+                {goResultBanner}
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* 고/스톱 선택 모달 */}
         <AnimatePresence>

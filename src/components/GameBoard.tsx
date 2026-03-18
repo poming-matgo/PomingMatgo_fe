@@ -40,8 +40,13 @@ export const GameBoard = () => {
   const opponent = useGameStore(state => state.opponent);
   const field = useGameStore(state => state.field);
   const currentTurn = useGameStore(state => state.currentTurn);
+  const turnKey = useGameStore(state => state.turnKey);
   const floorCardChoices = useGameStore(state => state.floorCardChoices);
   const goStopChoiceCount = useGameStore(state => state.goStopChoiceCount);
+  const opponentGoStopWaiting = useGameStore(state => state.opponentGoStopWaiting);
+  const goResultBanner = useGameStore(state => state.goResultBanner);
+  const playerGoCount = useGameStore(state => state.playerGoCount);
+  const opponentGoCount = useGameStore(state => state.opponentGoCount);
   const reset = useGameStore(state => state.reset);
 
   const { enqueue, resume } = useAnimationQueue(800);
@@ -77,6 +82,8 @@ export const GameBoard = () => {
     handleAcquiredCard,
     handleChooseFloorCard,
     handleGoStopChoice,
+    handleOpponentGoStopChoice,
+    handleGoResult,
     handleOpponentPiClaimed,
     handleScoreUpdate,
   } = useWebSocketHandlers({
@@ -115,6 +122,8 @@ export const GameBoard = () => {
     onOpponentPiClaimed: handleOpponentPiClaimed,
     onScoreUpdate: handleScoreUpdate,
     onGoStopChoice: handleGoStopChoice,
+    onOpponentGoStopChoice: handleOpponentGoStopChoice,
+    onGoResult: handleGoResult,
   });
 
   const handleGoStopSelect = useCallback((go: boolean) => {
@@ -171,6 +180,7 @@ export const GameBoard = () => {
           opponent={opponent}
           field={field}
           currentTurn={currentTurn}
+          turnKey={turnKey}
           isDealing={phase === GamePhase.SETUP}
           onCardSubmit={sendNormalSubmit}
           onDealingComplete={handleDealingComplete}
@@ -178,6 +188,10 @@ export const GameBoard = () => {
           onFloorCardSelect={handleFloorCardSelect}
           goStopChoiceCount={goStopChoiceCount}
           onGoStopSelect={handleGoStopSelect}
+          opponentGoStopWaiting={opponentGoStopWaiting}
+          goResultBanner={goResultBanner}
+          playerGoCount={playerGoCount}
+          opponentGoCount={opponentGoCount}
         />
       )}
     </div>
