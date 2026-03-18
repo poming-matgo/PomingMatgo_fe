@@ -1,6 +1,6 @@
 import { AnimatePresence } from 'framer-motion';
 import { AnimatedCard } from './AnimatedCard';
-import type { Card as CardData } from '../../types/card';
+import type { Card as CardData, CardName } from '../../types/card';
 
 interface HandAreaProps {
   cards: CardData[];
@@ -8,7 +8,7 @@ interface HandAreaProps {
   isDealing: boolean;
   dealingDone: boolean;
   currentTurn: 'player' | 'opponent';
-  onCardClick?: (cardName: string) => void;
+  onCardClick?: (cardName: CardName) => void;
 }
 
 const PLAYER_CARD_SIZE = { w: 60, h: 90 };
