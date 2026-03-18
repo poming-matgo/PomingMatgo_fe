@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 
 interface QueueItem {
   action: () => void;
@@ -6,78 +6,77 @@ interface QueueItem {
   immediate?: boolean;   // true면 앞선 애니메이션과 동시에 실행 (delay 소비 안 함)
 }
 
+function executeAction(item: QueueItem): void {
+  try {
+    item.action();
+  } catch (e) {
+    console.error('[AnimQ] action threw!', e);
+  }
+}
+
+/** 현재 아이템 뒤에 연속된 immediate 아이템들을 실행하고 개수를 반환 */
+function runConsecutiveImmediates(queue: QueueItem[]): number {
+  let count = 0;
+  for (let i = 1; i < queue.length; i++) {
+    if (!queue[i].immediate) break;
+    executeAction(queue[i]);
+    count++;
+  }
+  return count;
+}
+
 export const useAnimationQueue = (delay: number = 800) => {
-  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const queueRef = useRef<QueueItem[]>([]);
   const isProcessingRef = useRef(false);
   const waitingForResumeRef = useRef(false);
   const timerRef = useRef<number | null>(null);
 
-  const advance = useCallback(() => {
-    isProcessingRef.current = false;
-    waitingForResumeRef.current = false;
-    setQueue(prev => prev.slice(1));
-  }, []);
-
-  const enqueue = useCallback((action: () => void, options?: { interactive?: boolean; immediate?: boolean }) => {
-    setQueue(prev => [...prev, { action, interactive: options?.interactive, immediate: options?.immediate }]);
-  }, []);
-
-  const resume = useCallback(() => {
-    if (waitingForResumeRef.current) {
-      advance();
-    }
-  }, [advance]);
-
-  useEffect(() => {
-    if (isProcessingRef.current || queue.length === 0) {
-      return;
-    }
+  const processNext = useCallback(() => {
+    const queue = queueRef.current;
+    if (isProcessingRef.current || queue.length === 0) return;
 
     isProcessingRef.current = true;
     const item = queue[0];
 
-    try {
-      item.action();
-    } catch (e) {
-      console.error('[AnimQ] action threw!', e);
-    }
+    executeAction(item);
 
-    // 뒤따르는 immediate 아이템을 현재 아이템과 동시에 실행
-    let extraConsumed = 0;
-    for (let i = 1; i < queue.length; i++) {
-      if (!queue[i].immediate) break;
-      try {
-        queue[i].action();
-      } catch (e) {
-        console.error('[AnimQ] immediate action threw!', e);
-      }
-      extraConsumed++;
-    }
-    const totalConsumed = 1 + extraConsumed;
+    const immediateCount = runConsecutiveImmediates(queue);
+    const totalConsumed = 1 + immediateCount;
 
     if (item.interactive) {
-      // interactive 항목: resume() 호출될 때까지 대기
       waitingForResumeRef.current = true;
-      // immediate 아이템은 이미 실행했으므로 큐에서 제거
-      if (extraConsumed > 0) {
-        setQueue(prev => [...prev.slice(0, 1), ...prev.slice(totalConsumed)]);
+      if (immediateCount > 0) {
+        queue.splice(1, immediateCount);
       }
     } else if (item.immediate) {
-      // immediate 아이템이 큐 맨 앞에 온 경우: delay 없이 즉시 진행
+      queue.splice(0, totalConsumed);
       isProcessingRef.current = false;
-      setQueue(prev => prev.slice(totalConsumed));
+      processNext();
     } else {
-      // 일반 항목: delay 후 자동 진행 (immediate 포함하여 한꺼번에 제거)
       timerRef.current = window.setTimeout(() => {
         timerRef.current = null;
         isProcessingRef.current = false;
         waitingForResumeRef.current = false;
-        setQueue(prev => prev.slice(totalConsumed));
+        queue.splice(0, totalConsumed);
+        processNext();
       }, delay);
     }
-  }, [queue, delay, advance]);
+  }, [delay]);
 
-  // 컴포넌트 언마운트 시에만 타이머 정리
+  const enqueue = useCallback((action: () => void, options?: { interactive?: boolean; immediate?: boolean }) => {
+    queueRef.current.push({ action, ...options });
+    processNext();
+  }, [processNext]);
+
+  const resume = useCallback(() => {
+    if (waitingForResumeRef.current) {
+      isProcessingRef.current = false;
+      waitingForResumeRef.current = false;
+      queueRef.current.splice(0, 1);
+      processNext();
+    }
+  }, [processNext]);
+
   useEffect(() => {
     return () => {
       if (timerRef.current) {
