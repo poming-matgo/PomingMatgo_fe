@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const TOTAL_CARDS = 48;
 const CARD_DEAL_INTERVAL = 150;
@@ -36,12 +36,16 @@ export const useDealingAnimation = ({
   const [dealtOpponentCount, setDealtOpponentCount] = useState(isDealing ? 0 : opponentHandCount);
   const [dealtFloorCount, setDealtFloorCount] = useState(isDealing ? 0 : fieldCardCount);
 
+  // 콜백을 ref로 관리하여 의존성 배열에서 제거
+  const onDealingCompleteRef = useRef(onDealingComplete);
+  onDealingCompleteRef.current = onDealingComplete;
+
   const dealingDone = phase === 'done';
 
-  // 덱 잔여 수 계산
+  // 덱 잔여 수 계산 (단순 연산이므로 useMemo 불필요)
   const remainingDeck = TOTAL_CARDS - playerHandCount - opponentHandCount - fieldCardCount;
 
-  const deckDisplayCount = useMemo(() => {
+  const deckDisplayCount = (() => {
     if (!isDealing || dealingDone) return remainingDeck;
     if (phase === 'ready') return TOTAL_CARDS;
     if (phase === 'deal-player') return TOTAL_CARDS - dealtPlayerCount;
@@ -49,11 +53,17 @@ export const useDealingAnimation = ({
     if (phase === 'deal-floor') return TOTAL_CARDS - playerHandCount - opponentHandCount - dealtFloorCount;
     // show-turn
     return remainingDeck;
-  }, [isDealing, dealingDone, phase, dealtPlayerCount, dealtOpponentCount, dealtFloorCount, remainingDeck, playerHandCount, opponentHandCount]);
+  })();
 
   // 딜링 애니메이션 타이머
   useEffect(() => {
     if (!isDealing) return;
+
+    // 재실행 시 상태 명시적 초기화
+    setPhase('ready');
+    setDealtPlayerCount(0);
+    setDealtOpponentCount(0);
+    setDealtFloorCount(0);
 
     const timers: ReturnType<typeof setTimeout>[] = [];
 
@@ -90,11 +100,11 @@ export const useDealingAnimation = ({
     // 완료
     timers.push(setTimeout(() => {
       setPhase('done');
-      onDealingComplete?.();
+      onDealingCompleteRef.current?.();
     }, afterFloor + TURN_DISPLAY_DURATION));
 
     return () => timers.forEach(clearTimeout);
-  }, [isDealing, playerHandCount, opponentHandCount, fieldCardCount, onDealingComplete]);
+  }, [isDealing, playerHandCount, opponentHandCount, fieldCardCount]);
 
   return {
     phase,
