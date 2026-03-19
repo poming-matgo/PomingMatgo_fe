@@ -71,10 +71,6 @@ export const useGameWebSocket = (props: UseGameWebSocketProps): UseGameWebSocket
   }, []);
 
   // 3. 편의성 함수들
-  const sendRequest = useCallback(<T,>(message: WebSocketRequest<T>) => {
-    send(message);
-  }, [send]);
-
   const sendReady = useCallback(() => {
     send({
       eventType: { type: EventMainType.ROOM, subType: EventSubType.READY },
@@ -224,7 +220,7 @@ export const useGameWebSocket = (props: UseGameWebSocketProps): UseGameWebSocket
   return {
     isConnected,
     connectedPlayers,
-    sendMessage: sendRequest,
+    sendMessage: send as <T>(message: WebSocketRequest<T>) => void,
     sendReady,
     sendLeaderSelection,
     sendNormalSubmit,
