@@ -47,18 +47,54 @@ const createEmptyState = (): GameState => ({
   currentTurn: 'player'
 });
 
-export const useGameStore = create<GameStore>((set) => ({
-  ...createEmptyState(),
+const INITIAL_STORE_STATE = {
   isGameStarted: false,
-  roundInfo: null,
-  floorCardChoices: null,
-  goStopChoiceCount: null,
+  roundInfo: null as AnnounceTurnInformationData | null,
+  floorCardChoices: null as string[] | null,
+  goStopChoiceCount: null as number | null,
   opponentGoStopWaiting: false,
-  goResultBanner: null,
+  goResultBanner: null as string | null,
   playerGoCount: 0,
   opponentGoCount: 0,
   turnKey: 0,
-  pendingPiRemovals: [],
+  pendingPiRemovals: [] as string[],
+};
+
+/**
+ * 특정 플레이어의 PI captured에서 카드를 제거한 새 captured 객체를 반환
+ */
+const removePiFromCaptured = (
+  player: GameState['player'],
+  cardName: string,
+) => ({
+  ...player,
+  captured: {
+    ...player.captured,
+    PI: player.captured.PI.filter(c => c.name !== cardName),
+  },
+});
+
+/**
+ * acquireCards에서 pending 제거 예약을 처리
+ * ACQUIRED_CARD보다 OPPONENT_PI_CLAIMED이 먼저 도착한 경우, PI에서 해당 카드를 제거
+ */
+const applyPendingPiRemovals = (
+  piCards: Card[],
+  pendingRemovals: string[],
+): { filteredPi: Card[]; remainingPending: string[] } => {
+  const pendingNames = new Set(pendingRemovals);
+  const removedNames = new Set<string>(
+    piCards.filter(c => pendingNames.has(c.name)).map(c => c.name),
+  );
+  return {
+    filteredPi: piCards.filter(c => !pendingNames.has(c.name)),
+    remainingPending: pendingRemovals.filter(name => !removedNames.has(name)),
+  };
+};
+
+export const useGameStore = create<GameStore>((set) => ({
+  ...createEmptyState(),
+  ...INITIAL_STORE_STATE,
 
   loadGameState: (state: GameState) => {
     set(state);
@@ -104,20 +140,19 @@ export const useGameStore = create<GameStore>((set) => ({
 
   // 내가 카드를 제출: 손패에서 제거 → 바닥에 추가
   submitMyCard: (cardName: string) => {
-    set((state) => {
-      const cardInHand = state.player.hand.find((c) => c.name === cardName);
-      if (!cardInHand) {
-        console.warn(`[submitMyCard] Card not found in hand: ${cardName}`,
-          'current hand:', state.player.hand.map(c => c.name));
-        return {};
-      }
-      return {
-        player: {
-          ...state.player,
-          hand: state.player.hand.filter((c) => c.name !== cardName),
-        },
-        field: [...state.field, cardInHand],
-      };
+    const { player, field } = useGameStore.getState();
+    const cardInHand = player.hand.find((c) => c.name === cardName);
+    if (!cardInHand) {
+      console.warn(`[submitMyCard] Card not found in hand: ${cardName}`,
+        'current hand:', player.hand.map(c => c.name));
+      return;
+    }
+    set({
+      player: {
+        ...player,
+        hand: player.hand.filter((c) => c.name !== cardName),
+      },
+      field: [...field, cardInHand],
     });
   },
 
@@ -164,19 +199,18 @@ export const useGameStore = create<GameStore>((set) => ({
         newCaptured[type] = [...newCaptured[type], ...cards];
       }
 
-      // pending 제거 예약 처리: PI에서 제거 후 소비된 pending 정리
-      let pendingPiRemovals = state.pendingPiRemovals;
-      if (pendingPiRemovals.length > 0) {
-        const pendingNames = new Set(pendingPiRemovals);
-        const removedNames: Set<string> = new Set(newCaptured.PI.filter(c => pendingNames.has(c.name)).map(c => c.name));
-        newCaptured.PI = newCaptured.PI.filter(c => !pendingNames.has(c.name));
-        pendingPiRemovals = pendingPiRemovals.filter(name => !removedNames.has(name));
+      // pending 제거 예약 처리
+      let remainingPending = state.pendingPiRemovals;
+      if (remainingPending.length > 0) {
+        const result = applyPendingPiRemovals(newCaptured.PI, remainingPending);
+        newCaptured.PI = result.filteredPi;
+        remainingPending = result.remainingPending;
       }
 
       const updatedPlayer = { ...targetPlayer, captured: newCaptured };
       return {
         field: newField,
-        pendingPiRemovals,
+        pendingPiRemovals: remainingPending,
         ...(target === 'player' ? { player: updatedPlayer } : { opponent: updatedPlayer }),
       };
     });
@@ -188,28 +222,12 @@ export const useGameStore = create<GameStore>((set) => ({
     set((state) => {
       // opponent에서 찾기 (내가 뺏는 쪽인 경우)
       if (state.opponent.captured.PI.some(c => c.name === cardName)) {
-        return {
-          opponent: {
-            ...state.opponent,
-            captured: {
-              ...state.opponent.captured,
-              PI: state.opponent.captured.PI.filter(c => c.name !== cardName),
-            },
-          },
-        };
+        return { opponent: removePiFromCaptured(state.opponent, cardName) };
       }
 
       // player에서 찾기 (내가 뺏기는 쪽인 경우)
       if (state.player.captured.PI.some(c => c.name === cardName)) {
-        return {
-          player: {
-            ...state.player,
-            captured: {
-              ...state.player.captured,
-              PI: state.player.captured.PI.filter(c => c.name !== cardName),
-            },
-          },
-        };
+        return { player: removePiFromCaptured(state.player, cardName) };
       }
 
       // 양쪽 다 없으면 제거 예약 (ACQUIRED_CARD보다 먼저 도착한 경우)
@@ -251,6 +269,6 @@ export const useGameStore = create<GameStore>((set) => ({
   },
 
   reset: () => {
-    set({ ...createEmptyState(), isGameStarted: false, roundInfo: null, floorCardChoices: null, goStopChoiceCount: null, opponentGoStopWaiting: false, goResultBanner: null, playerGoCount: 0, opponentGoCount: 0, turnKey: 0, pendingPiRemovals: [] });
+    set({ ...createEmptyState(), ...INITIAL_STORE_STATE });
   },
 }));
