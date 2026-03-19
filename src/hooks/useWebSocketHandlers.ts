@@ -1,5 +1,5 @@
 import { useCallback, type RefObject } from 'react';
-import { Player } from '../types/websocket';
+import { Player, PlayerNumber } from '../types/websocket';
 import { GamePhase, SetupCondition } from '../constants/gamePhase';
 import { useGameStore } from '../store/gameStore';
 import type {
@@ -16,6 +16,8 @@ const Target = {
   OPPONENT: 'opponent',
 } as const;
 
+let goResultTimerId: ReturnType<typeof setTimeout> | null = null;
+
 interface UseWebSocketHandlersProps {
   myPlayer: Player;
   phaseRef: RefObject<GamePhase>;
@@ -29,6 +31,11 @@ export const useWebSocketHandlers = ({
   addSetupCondition,
   enqueue,
 }: UseWebSocketHandlersProps) => {
+
+  const resolveTarget = useCallback(
+    (msgPlayer: Player) => msgPlayer === myPlayer ? Target.PLAYER : Target.OPPONENT,
+    [myPlayer],
+  );
 
   // [세팅] 카드 분배
   const handleDistributeCard = useCallback((msgPlayer: Player, cards: DistributeCardData) => {
@@ -51,11 +58,9 @@ export const useWebSocketHandlers = ({
   const handleAnnounceTurnInformation = useCallback((data: AnnounceTurnInformationData) => {
     const { setRoundInfo } = useGameStore.getState();
     if (phaseRef.current === GamePhase.SETUP || phaseRef.current === GamePhase.LEADER_SELECTION) {
-      // 초기 세팅 단계에서의 턴 정보
       setRoundInfo(data, myPlayer);
       addSetupCondition(SetupCondition.TURN);
     } else {
-      // 게임 중 턴 변경 (애니메이션 큐 사용)
       enqueue(() => setRoundInfo(data, myPlayer));
     }
   }, [myPlayer, phaseRef, addSetupCondition, enqueue]);
@@ -63,45 +68,33 @@ export const useWebSocketHandlers = ({
   // [플레이] 카드 제출
   const handleSubmitCard = useCallback((msgPlayer: Player, cardName: string) => {
     const { submitMyCard, submitOpponentCard } = useGameStore.getState();
-    enqueue(() => {
-      if (msgPlayer === myPlayer) {
-        submitMyCard(cardName);
-      } else {
-        submitOpponentCard(cardName);
-      }
-    });
+    const submit = msgPlayer === myPlayer ? submitMyCard : submitOpponentCard;
+    enqueue(() => submit(cardName));
   }, [myPlayer, enqueue]);
 
   // [플레이] 덱에서 뒤집기
   const handleCardRevealed = useCallback((cardName: string) => {
     const { revealCard } = useGameStore.getState();
-    enqueue(() => {
-      revealCard(cardName);
-    });
+    enqueue(() => revealCard(cardName));
   }, [enqueue]);
 
   // [플레이] 바닥 카드 선택 요청 (유저 인터랙션 대기)
   const handleChooseFloorCard = useCallback((_msgPlayer: Player, data: ChooseFloorCardData) => {
     const { setFloorCardChoices } = useGameStore.getState();
-    enqueue(() => {
-      setFloorCardChoices(data);
-    }, { interactive: true });
+    enqueue(() => setFloorCardChoices(data), { interactive: true });
   }, [enqueue]);
 
   // [플레이] 카드 획득 (쪽/뻑 포함)
   const handleAcquiredCard = useCallback((msgPlayer: Player, data: AcquiredCardData) => {
     const { acquireCards } = useGameStore.getState();
-    enqueue(() => {
-      const target = msgPlayer === myPlayer ? Target.PLAYER : Target.OPPONENT;
-      acquireCards(target, data);
-    });
-  }, [myPlayer, enqueue]);
+    enqueue(() => acquireCards(resolveTarget(msgPlayer), data));
+  }, [resolveTarget, enqueue]);
 
   // [플레이] 점수 업데이트 (이전 애니메이션 완료 직후 즉시 반영)
   const handleScoreUpdate = useCallback((data: ScoreUpdateData) => {
     enqueue(() => {
       const { updateScores } = useGameStore.getState();
-      const myNumber = myPlayer === 'PLAYER_1' ? 1 : 2;
+      const myNumber = PlayerNumber[myPlayer];
       const myScoreEntry = data.scores.find(s => s.playerNumber === myNumber);
       const opponentScoreEntry = data.scores.find(s => s.playerNumber !== myNumber);
       updateScores(myScoreEntry?.score ?? 0, opponentScoreEntry?.score ?? 0);
@@ -111,29 +104,28 @@ export const useWebSocketHandlers = ({
   // [플레이] 고/스톱 선택 요청 (유저 인터랙션 대기)
   const handleGoStopChoice = useCallback((_msgPlayer: Player, goCount: number) => {
     const { setGoStopChoiceCount } = useGameStore.getState();
-    enqueue(() => {
-      setGoStopChoiceCount(goCount);
-    }, { interactive: true });
+    enqueue(() => setGoStopChoiceCount(goCount), { interactive: true });
   }, [enqueue]);
 
   // [플레이] 상대방이 고/스톱 선택중 (대기 표시, 큐는 멈추지 않음)
   const handleOpponentGoStopChoice = useCallback(() => {
     const { setOpponentGoStopWaiting } = useGameStore.getState();
-    enqueue(() => {
-      setOpponentGoStopWaiting(true);
-    });
+    enqueue(() => setOpponentGoStopWaiting(true));
   }, [enqueue]);
 
   // [플레이] 고/스톱 결과 (1초간 배너 표시 + 고 횟수 갱신 + 대기 해제)
   const handleGoResult = useCallback((msgPlayer: Player, goCount: string) => {
-    const target = msgPlayer === myPlayer ? Target.PLAYER : Target.OPPONENT;
     enqueue(() => {
       const { setGoResult, clearGoResultBanner, setOpponentGoStopWaiting } = useGameStore.getState();
       setOpponentGoStopWaiting(false);
-      setGoResult(target, Number(goCount));
-      setTimeout(() => clearGoResultBanner(), 1000);
+      setGoResult(resolveTarget(msgPlayer), Number(goCount));
+      if (goResultTimerId) clearTimeout(goResultTimerId);
+      goResultTimerId = setTimeout(() => {
+        clearGoResultBanner();
+        goResultTimerId = null;
+      }, 1000);
     });
-  }, [myPlayer, enqueue]);
+  }, [resolveTarget, enqueue]);
 
   // [플레이] 상대 피 뺏기: 양쪽 captured.PI에서 카드를 찾아 제거 (추가는 ACQUIRED_CARD가 처리)
   const handleOpponentPiClaimed = useCallback((_msgPlayer: Player, cardName: string) => {
