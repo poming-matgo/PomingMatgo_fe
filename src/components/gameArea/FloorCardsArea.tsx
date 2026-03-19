@@ -1,9 +1,10 @@
+import { useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DeckDisplay } from './DeckDisplay';
 import { FloorCardGroup } from './FloorCardGroup';
-import { useFloorGroupPositions } from './useFloorGroupPositions';
 import { Card as CardComponent } from '../Card';
 import { cardNameToCard } from '../../store/gameStore.helpers';
+import { getSortedGroups, computeGroupPositions } from './floorLayout';
 import type { Card } from '../../types/card';
 
 interface FloorCardsAreaProps {
@@ -25,7 +26,11 @@ export const FloorCardsArea = ({
   floorCardChoices,
   onFloorCardSelect,
 }: FloorCardsAreaProps) => {
-  const { sortedGroups, positions } = useFloorGroupPositions(cards);
+  const sortedGroups = useMemo(() => getSortedGroups(cards), [cards]);
+  const positions = useMemo(
+    () => computeGroupPositions(sortedGroups).positions,
+    [sortedGroups],
+  );
 
   return (
     <div className="relative w-full h-full overflow-hidden">

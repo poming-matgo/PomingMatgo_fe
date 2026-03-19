@@ -68,8 +68,6 @@ const MONTH_TO_SLOT: readonly number[] = [
 // ── 타입 ──────────────────────────────────────────────
 export type MonthGroup = [month: string, cards: Card[]];
 export type Position = { x: number; y: number };
-export type CachedGroup = { pos: Position };
-
 // ── 순수 헬퍼 ─────────────────────────────────────────
 
 /** 결정적 랜덤 (시드 기반) */
@@ -108,29 +106,12 @@ export function getSortedGroups(cards: Card[]): MonthGroup[] {
  * 그룹 위치 계산 (순수 함수)
  *
  * - 월별로 사전 정의된 슬롯에 배치 → 겹침 구조적으로 불가능
- * - 한번 배치된 그룹의 위치는 절대 변하지 않음
+ * - getSlotPosition이 시드 기반 결정적 함수이므로 동일 월 → 동일 위치 보장
  * - position은 슬롯의 중심 좌표 (렌더링 시 왼쪽 상단으로 변환)
  */
 export function computeGroupPositions(
   sortedGroups: MonthGroup[],
-  prevCache: ReadonlyMap<string, CachedGroup>,
-): { positions: Position[]; nextCache: Map<string, CachedGroup> } {
-  const nextCache = new Map<string, CachedGroup>();
-  const positions: Position[] = [];
-
-  for (const [month] of sortedGroups) {
-    const cached = prevCache.get(month);
-
-    if (cached) {
-      nextCache.set(month, cached);
-      positions.push(cached.pos);
-      continue;
-    }
-
-    const pos = getSlotPosition(Number(month));
-    nextCache.set(month, { pos });
-    positions.push(pos);
-  }
-
-  return { positions, nextCache };
+): { positions: Position[] } {
+  const positions = sortedGroups.map(([month]) => getSlotPosition(Number(month)));
+  return { positions };
 }
