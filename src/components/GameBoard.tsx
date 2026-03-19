@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 // Store & Hooks
@@ -33,20 +33,9 @@ export const GameBoard = () => {
   const roomId = state?.roomId ?? '';
   const initialHasOpponent = state?.initialHasOpponent ?? false;
 
-  const myPlayer = useMemo(() => (userId === '1' ? Player.PLAYER_1 : Player.PLAYER_2), [userId]);
+  const myPlayer = userId === '1' ? Player.PLAYER_1 : Player.PLAYER_2;
 
   // --- 2. Hooks & Store ---
-  const player = useGameStore(state => state.player);
-  const opponent = useGameStore(state => state.opponent);
-  const field = useGameStore(state => state.field);
-  const currentTurn = useGameStore(state => state.currentTurn);
-  const turnKey = useGameStore(state => state.turnKey);
-  const floorCardChoices = useGameStore(state => state.floorCardChoices);
-  const goStopChoiceCount = useGameStore(state => state.goStopChoiceCount);
-  const opponentGoStopWaiting = useGameStore(state => state.opponentGoStopWaiting);
-  const goResultBanner = useGameStore(state => state.goResultBanner);
-  const playerGoCount = useGameStore(state => state.playerGoCount);
-  const opponentGoCount = useGameStore(state => state.opponentGoCount);
   const reset = useGameStore(state => state.reset);
 
   const { enqueue, resume } = useAnimationQueue(800);
@@ -126,18 +115,6 @@ export const GameBoard = () => {
     onGoResult: handleGoResult,
   });
 
-  const handleGoStopSelect = useCallback((go: boolean) => {
-    sendGoStopChoice(go);
-    useGameStore.getState().setGoStopChoiceCount(null);
-    resume();
-  }, [sendGoStopChoice, resume]);
-
-  const handleFloorCardSelect = useCallback((cardIndex: number) => {
-    sendFloorSelect(cardIndex);
-    useGameStore.getState().setFloorCardChoices(null);
-    resume(); // 애니메이션 큐 진행 재개
-  }, [sendFloorSelect, resume]);
-
   const hasOpponent = connectionState.hasOpponent || connectedPlayers.length >= 2;
 
   // --- 7. Render Logic ---
@@ -176,22 +153,12 @@ export const GameBoard = () => {
 
       {(phase === GamePhase.SETUP || phase === GamePhase.PLAYING) && (
         <ActiveGameScreen
-          player={player}
-          opponent={opponent}
-          field={field}
-          currentTurn={currentTurn}
-          turnKey={turnKey}
           isDealing={phase === GamePhase.SETUP}
           onCardSubmit={sendNormalSubmit}
           onDealingComplete={handleDealingComplete}
-          floorCardChoices={floorCardChoices}
-          onFloorCardSelect={handleFloorCardSelect}
-          goStopChoiceCount={goStopChoiceCount}
-          onGoStopSelect={handleGoStopSelect}
-          opponentGoStopWaiting={opponentGoStopWaiting}
-          goResultBanner={goResultBanner}
-          playerGoCount={playerGoCount}
-          opponentGoCount={opponentGoCount}
+          sendFloorSelect={sendFloorSelect}
+          sendGoStopChoice={sendGoStopChoice}
+          resume={resume}
         />
       )}
     </div>

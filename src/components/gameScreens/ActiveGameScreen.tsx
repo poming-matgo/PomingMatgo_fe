@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { LayoutGroup } from 'framer-motion';
+import { useGameStore } from '../../store/gameStore';
 import { useDealingAnimation } from '../../hooks/useDealingAnimation';
 import { useOptimisticSubmit } from '../../hooks/useOptimisticSubmit';
 import { HandArea } from '../gameArea/HandArea';
@@ -8,46 +9,50 @@ import { TurnOverlay } from '../gameArea/TurnOverlay';
 import { CapturedArea } from '../CapturedArea';
 import { ScoreHUD } from './ScoreHUD';
 import { OpponentWaitingOverlay, GoResultBanner, GoStopChoiceModal } from './GameOverlays';
-import type { Player } from '../../types/game';
-import type { Card as CardData } from '../../types/card';
 
 interface ActiveGameScreenProps {
-  player: Player;
-  opponent: Player;
-  field: CardData[];
-  currentTurn: 'player' | 'opponent';
-  turnKey?: number;
   isDealing?: boolean;
   onCardSubmit?: (cardIndex: number) => void;
   onDealingComplete?: () => void;
-  floorCardChoices?: string[] | null;
-  onFloorCardSelect?: (cardIndex: number) => void;
-  goStopChoiceCount?: number | null;
-  onGoStopSelect?: (go: boolean) => void;
-  opponentGoStopWaiting?: boolean;
-  goResultBanner?: string | null;
-  playerGoCount?: number;
-  opponentGoCount?: number;
+  sendFloorSelect?: (cardIndex: number) => void;
+  sendGoStopChoice?: (go: boolean) => void;
+  resume?: () => void;
 }
 
 export const ActiveGameScreen = ({
-  player,
-  opponent,
-  field,
-  currentTurn,
   isDealing = false,
   onCardSubmit,
   onDealingComplete,
-  floorCardChoices,
-  onFloorCardSelect,
-  goStopChoiceCount,
-  onGoStopSelect,
-  turnKey,
-  opponentGoStopWaiting = false,
-  goResultBanner,
-  playerGoCount = 0,
-  opponentGoCount = 0,
+  sendFloorSelect,
+  sendGoStopChoice,
+  resume,
 }: ActiveGameScreenProps) => {
+  // --- Store 직접 구독 ---
+  const player = useGameStore(state => state.player);
+  const opponent = useGameStore(state => state.opponent);
+  const field = useGameStore(state => state.field);
+  const currentTurn = useGameStore(state => state.currentTurn);
+  const turnKey = useGameStore(state => state.turnKey);
+  const floorCardChoices = useGameStore(state => state.floorCardChoices);
+  const goStopChoiceCount = useGameStore(state => state.goStopChoiceCount);
+  const opponentGoStopWaiting = useGameStore(state => state.opponentGoStopWaiting);
+  const goResultBanner = useGameStore(state => state.goResultBanner);
+  const playerGoCount = useGameStore(state => state.playerGoCount);
+  const opponentGoCount = useGameStore(state => state.opponentGoCount);
+  const setFloorCardChoices = useGameStore(state => state.setFloorCardChoices);
+  const setGoStopChoiceCount = useGameStore(state => state.setGoStopChoiceCount);
+
+  const handleFloorCardSelect = useCallback((cardIndex: number) => {
+    sendFloorSelect?.(cardIndex);
+    setFloorCardChoices(null);
+    resume?.();
+  }, [sendFloorSelect, setFloorCardChoices, resume]);
+
+  const handleGoStopSelect = useCallback((go: boolean) => {
+    sendGoStopChoice?.(go);
+    setGoStopChoiceCount(null);
+    resume?.();
+  }, [sendGoStopChoice, setGoStopChoiceCount, resume]);
   const {
     phase,
     dealingDone,
@@ -122,7 +127,7 @@ export const ActiveGameScreen = ({
             deckCount={deckDisplayCount}
             deckSampleCard={field[0] ?? player.hand[0]}
             floorCardChoices={floorCardChoices}
-            onFloorCardSelect={onFloorCardSelect}
+            onFloorCardSelect={handleFloorCardSelect}
           />
         </div>
 
@@ -154,7 +159,7 @@ export const ActiveGameScreen = ({
         {/* 오버레이 & 모달 */}
         <OpponentWaitingOverlay visible={opponentGoStopWaiting} />
         <GoResultBanner text={goResultBanner} />
-        <GoStopChoiceModal choiceCount={goStopChoiceCount} onSelect={onGoStopSelect} />
+        <GoStopChoiceModal choiceCount={goStopChoiceCount} onSelect={handleGoStopSelect} />
         <TurnOverlay phase={phase} currentTurn={currentTurn} />
       </div>
     </LayoutGroup>
