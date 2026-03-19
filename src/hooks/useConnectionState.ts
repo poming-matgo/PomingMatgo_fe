@@ -9,7 +9,6 @@ interface UseConnectionStateProps {
 
 export const useConnectionState = ({ initialHasOpponent, myPlayer }: UseConnectionStateProps) => {
   const [connectionState, setConnectionState] = useState<ConnectionState>({
-    isConnected: false,
     hasOpponent: initialHasOpponent,
     myReady: false,
     opponentReady: false,
@@ -18,6 +17,12 @@ export const useConnectionState = ({ initialHasOpponent, myPlayer }: UseConnecti
   const handleOpponentConnect = useCallback((connectedPlayer: Player) => {
     if (connectedPlayer !== myPlayer) {
       setConnectionState(prev => ({ ...prev, hasOpponent: true }));
+    }
+  }, [myPlayer]);
+
+  const handleOpponentDisconnect = useCallback((disconnectedPlayer: Player) => {
+    if (disconnectedPlayer !== myPlayer) {
+      setConnectionState(prev => ({ ...prev, hasOpponent: false }));
     }
   }, [myPlayer]);
 
@@ -32,6 +37,7 @@ export const useConnectionState = ({ initialHasOpponent, myPlayer }: UseConnecti
   return {
     connectionState,
     handleOpponentConnect,
+    handleOpponentDisconnect,
     handlePlayerReady,
   };
 };

@@ -52,7 +52,6 @@ export interface CardSelection {
 }
 
 export interface ConnectionState {
-  isConnected: boolean;
   hasOpponent: boolean;
   myReady: boolean;
   opponentReady: boolean;
