@@ -30,10 +30,7 @@ export const useOptimisticSubmit = ({
     setPendingSubmits((prev) => {
       if (prev.size === 0) return prev;
       const handNames = new Set(hand.map(c => c.name));
-      const next = new Set<CardName>();
-      for (const name of prev) {
-        if (handNames.has(name)) next.add(name);
-      }
+      const next = new Set([...prev].filter(name => handNames.has(name)));
       return next.size === prev.size ? prev : next;
     });
   }, [hand]);
@@ -44,22 +41,28 @@ export const useOptimisticSubmit = ({
   }, [currentTurn, turnKey]);
 
   const visibleHand = useMemo(() => {
-    const sliced = isDealing && !dealingDone ? hand.slice(0, visiblePlayerCards) : hand;
-    return pendingSubmits.size > 0 ? sliced.filter(c => !pendingSubmits.has(c.name)) : sliced;
+    const base = isDealing && !dealingDone
+      ? hand.slice(0, visiblePlayerCards)
+      : hand;
+
+    if (pendingSubmits.size === 0) return base;
+    return base.filter(c => !pendingSubmits.has(c.name));
   }, [isDealing, dealingDone, hand, visiblePlayerCards, pendingSubmits]);
 
   const canSubmit = !isDealing && currentTurn === 'player';
 
   const handleCardClick = useCallback((cardName: CardName) => {
-    if (!onCardSubmit || !canSubmit) return;
+    if (!onCardSubmit) return;
+    if (isDealing || currentTurn !== 'player') return;
     if (submittedRef.current) return; // 턴당 한 장만 (동기적 차단)
+
     const index = hand.findIndex(c => c.name === cardName);
-    if (index !== -1) {
-      submittedRef.current = true;
-      setPendingSubmits((prev) => new Set(prev).add(cardName));
-      onCardSubmit(index);
-    }
-  }, [onCardSubmit, canSubmit, hand]);
+    if (index === -1) return;
+
+    submittedRef.current = true;
+    setPendingSubmits((prev) => new Set(prev).add(cardName));
+    onCardSubmit(index);
+  }, [onCardSubmit, isDealing, currentTurn, hand]);
 
   return { visibleHand, canSubmit, handleCardClick };
 };
