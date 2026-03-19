@@ -19,6 +19,7 @@ export const SLOT_W = CARD_W + (MAX_CARDS_PER_MONTH - 1) * (CARD_W - CARD_OVERLA
 // ±4px 지터 적용해도 겹침 불가능
 const SX = 150;
 const SY = 90;
+const JITTER_RANGE = 8;
 
 /**
  * 사전 검증된 14개 슬롯 위치 (중심 좌표).
@@ -90,8 +91,8 @@ function getSlotPosition(month: number): Position {
   const slotIdx = MONTH_TO_SLOT[(month - 1) % 12];
   const base = SLOT_POSITIONS[slotIdx];
   // ±4px 지터 (간격 여유 24/23px 내에서 안전)
-  const jx = (seededRandom(`${month}jx`) - 0.5) * 8;
-  const jy = (seededRandom(`${month}jy`) - 0.5) * 8;
+  const jx = (seededRandom(`${month}jx`) - 0.5) * JITTER_RANGE;
+  const jy = (seededRandom(`${month}jy`) - 0.5) * JITTER_RANGE;
   return { x: base.x + jx, y: base.y + jy };
 }
 
