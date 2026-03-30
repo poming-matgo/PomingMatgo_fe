@@ -8,6 +8,7 @@ interface UseOptimisticSubmitOptions {
   isDealing: boolean;
   dealingDone: boolean;
   visiblePlayerCards: number;
+  isTimerExpired?: boolean;
   onCardSubmit?: (cardIndex: number) => void;
 }
 
@@ -18,6 +19,7 @@ export const useOptimisticSubmit = ({
   isDealing,
   dealingDone,
   visiblePlayerCards,
+  isTimerExpired = false,
   onCardSubmit,
 }: UseOptimisticSubmitOptions) => {
   // 클릭 즉시 UI에서 카드를 숨기기 위한 낙관적 제거 목록
@@ -49,11 +51,12 @@ export const useOptimisticSubmit = ({
     return base.filter(c => !pendingSubmits.has(c.name));
   }, [isDealing, dealingDone, hand, visiblePlayerCards, pendingSubmits]);
 
-  const canSubmit = !isDealing && currentTurn === 'player';
+  const canSubmit = !isDealing && currentTurn === 'player' && !isTimerExpired;
 
   const handleCardClick = useCallback((cardName: CardName) => {
     if (!onCardSubmit) return;
     if (isDealing || currentTurn !== 'player') return;
+    if (isTimerExpired) return; // 제출 시간 초과
     if (submittedRef.current) return; // 턴당 한 장만 (동기적 차단)
 
     const index = hand.findIndex(c => c.name === cardName);
@@ -62,7 +65,7 @@ export const useOptimisticSubmit = ({
     submittedRef.current = true;
     setPendingSubmits((prev) => new Set(prev).add(cardName));
     onCardSubmit(index);
-  }, [onCardSubmit, isDealing, currentTurn, hand]);
+  }, [onCardSubmit, isDealing, currentTurn, isTimerExpired, hand]);
 
   return { visibleHand, canSubmit, handleCardClick };
 };

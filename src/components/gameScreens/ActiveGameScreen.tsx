@@ -3,6 +3,7 @@ import { LayoutGroup } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useDealingAnimation } from '../../hooks/useDealingAnimation';
 import { useOptimisticSubmit } from '../../hooks/useOptimisticSubmit';
+import { useCardSubmitTimer } from '../../hooks/useCardSubmitTimer';
 import { HandArea } from '../gameArea/HandArea';
 import { FloorCardsArea } from '../gameArea/FloorCardsArea';
 import { TurnOverlay } from '../gameArea/TurnOverlay';
@@ -68,6 +69,13 @@ export const ActiveGameScreen = ({
     onDealingComplete,
   });
 
+  const { timeLeft, isExpired: isTimerExpired } = useCardSubmitTimer({
+    currentTurn,
+    turnKey,
+    isDealing,
+    dealingDone,
+  });
+
   const { visibleHand, canSubmit, handleCardClick } = useOptimisticSubmit({
     hand: player.hand,
     currentTurn,
@@ -75,6 +83,7 @@ export const ActiveGameScreen = ({
     isDealing,
     dealingDone,
     visiblePlayerCards,
+    isTimerExpired,
     onCardSubmit,
   });
 
@@ -132,7 +141,12 @@ export const ActiveGameScreen = ({
         </div>
 
         {/* ===== 하단 영역: 나 ===== */}
-        <div className="flex items-center gap-3 px-3 py-2 bg-black/10 rounded-b-lg shadow-[0_-2px_8px_rgba(0,0,0,0.15)]">
+        <div className="flex items-center gap-3 px-3 py-2 bg-black/10 rounded-b-lg shadow-[0_-2px_8px_rgba(0,0,0,0.15)] relative">
+          {timeLeft !== null && (
+            <div className={`absolute top-1 right-2 text-xs font-bold px-2 py-0.5 rounded ${timeLeft <= 3 ? 'text-red-400' : 'text-yellow-300'}`}>
+              {timeLeft === 0 ? '시간 초과' : `${timeLeft}초`}
+            </div>
+          )}
           <div className="w-[420px] shrink-0">
             <CapturedArea captured={player.captured} />
           </div>
